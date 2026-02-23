@@ -345,9 +345,6 @@ def cocina_pedidos():
 @rol_required(['3'])
 def cocina_en_proceso():
     """Vista de pedidos en preparación"""
-    if "usuario_rol" not in session or str(session["usuario_rol"]) != "3":
-        return redirect(url_for("routes.login"))
-    
     # Placeholder: implementar vista
     return render_template("cocina/en_proceso.html")
 
