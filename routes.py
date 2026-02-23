@@ -7,6 +7,8 @@ from controllers.auth.AuthController import AuthController, login_required, rol_
 from controllers.dashboard.dashboard_controller import DashboardController
 from controllers.admin.BackupController import BackupController
 from controllers.inventario.inventarioController import InventarioController
+from models.inventario_model import Insumo
+from flask import render_template
 from controllers.dashboard.dashboardApiController import DashboardAPIController
 routes_bp = Blueprint("routes", __name__)
 
@@ -234,12 +236,16 @@ Agregar estas rutas al archivo routes.py principal
 def dashboard_inventario():
     return InventarioController.dashboard()
 
-# --- Gestión de Insumos ---
+# --- Gestión de Insumos ---//
 @routes_bp.route("/inventario/insumos")
-@login_required
-@rol_required(['1', '4'])
 def inventario_insumos():
-    return InventarioController.lista_insumos()
+    
+   
+    insumos = Insumo.obtener_todos()
+    return render_template(
+        "inventario/insumos.html",
+        insumos=insumos
+    )
 
 @routes_bp.route("/inventario/insumos/crear", methods=["GET", "POST"])
 @login_required
@@ -266,7 +272,7 @@ def inventario_registrar_salida():
 def inventario_registrar_merma():
     return InventarioController.registrar_merma()
 
-@routes_bp.route("/inventario/movimientos/historial")
+@routes_bp.route("/inventario/movimientos/historial") #/historial
 @login_required
 @rol_required(['1', '4'])
 def inventario_historial():

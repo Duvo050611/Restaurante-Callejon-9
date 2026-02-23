@@ -159,7 +159,7 @@ class InventarioController:
             proveedores=proveedores,
             categorias=categorias,
             unidades=unidades
-        )
+        ) 
     
     # ==========================================
     # MOVIMIENTOS DE INVENTARIO
@@ -350,7 +350,7 @@ class InventarioController:
             tipos_movimiento = [t.value for t in TipoMovimiento]
             
             return render_template(
-                "inventario/movimientos/historial.html",
+                "inventario/movimientos.html",
                 movimientos=movimientos,
                 insumos=insumos,
                 tipos_movimiento=tipos_movimiento
@@ -358,7 +358,7 @@ class InventarioController:
             
         except Exception as e:
             logging.error(f"Error al obtener historial: {e}")
-            return render_template("inventario/movimientos/historial.html", error=str(e))
+            return render_template("inventario/movimientos.html", error=str(e))
     
     # ==========================================
     # ALERTAS
@@ -478,4 +478,4 @@ class InventarioController:
         if "usuario_rol" not in session or str(session["usuario_rol"]) not in ["1", "4"]:
             return redirect(url_for("routes.login"))
         
-        return render_template("inventario/reportes/index.html")
+        return render_template("inventario/reportes.html")
