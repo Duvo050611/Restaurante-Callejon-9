@@ -54,24 +54,28 @@ socketio = SocketIO(
     manage_session=False
 )
 
-# ================================
-# CONFIG SESIÓN
-# ================================
-app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
+# Registrar Blueprint de rutas
+app.register_blueprint(routes_bp)
+
+# Registrar rutas de reportes
+from routes import register_reports_routes
+register_reports_routes(app)
+
+# 🔑 CLAVE SECRETA (Usa una variable de entorno en producción)
+app.secret_key = os.getenv("SECRET_KEY", "22d6225b061b6b75979d7b4fd5bfb6993b32a66346c0d188fd6f3a37ac36698e")
 
 session_dir = os.path.join(os.getcwd(), "flask_session")
 os.makedirs(session_dir, exist_ok=True)
 
-app.config.update(
-    SESSION_TYPE="filesystem",
-    SESSION_FILE_DIR=session_dir,
-    SESSION_PERMANENT=True,
-    SESSION_USE_SIGNER=True,
-    SESSION_COOKIE_SECURE=False,
-    SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_NAME="callejon9_session"
-)
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_FILE_DIR"] = session_dir
+app.config["SESSION_PERMANENT"] = True
+app.config["SESSION_USE_SIGNER"] = True
+app.config["SESSION_COOKIE_SECURE"] = False  # True en producción
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_NAME"] = "callejon9_session"
 
+# Inicializar extensión de sesiones
 Session(app)
 
 # ================================

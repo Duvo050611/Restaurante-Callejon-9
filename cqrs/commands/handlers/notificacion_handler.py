@@ -5,9 +5,17 @@ Gestiona la creación y actualización de notificaciones
 
 from datetime import datetime
 from bson import ObjectId
+from pytz import timezone
 from models.notificacion import Notificacion
 from services.notificaciones.notification_service import notificar_usuario
-from config.db import db
+
+# Zona horaria de Mexico City (CST/CDT)
+Mexico_TZ = timezone('America/Mexico_City')
+
+def get_mexico_datetime():
+    """Obtiene la fecha y hora actual en zona horaria de Mexico"""
+    return datetime.now(Mexico_TZ)
+
 
 class NotificacionCommandHandler:
     """
@@ -35,9 +43,9 @@ class NotificacionCommandHandler:
                 "mensaje": mensaje,
                 "id_usuario": ObjectId(id_usuario),
                 "leida": False,
-                "fecha": datetime.utcnow(),
-                "created_at": datetime.utcnow(),
-                "updated_at": datetime.utcnow(),
+                "fecha": get_mexico_datetime(),
+                "created_at": get_mexico_datetime(),
+                "updated_at": get_mexico_datetime(),
                 "datos_extra": datos_extra or {}
             }
             
@@ -151,71 +159,107 @@ class NotificacionSistemaHandler:
 
     # Tipos de notificaciones por rol
     TIPOS_ADMIN = {
-        "LOGIN": "🔐 Inicio de Sesión",
-        "LOGOUT": "🚪 Cierre de Sesión",
-        "ERROR_SISTEMA": "⚠️ Error del Sistema",
-        "BACKUP_CREADO": "💾 Backup Creado",
-        "BACKUP_RESTAURADO": "🔄 Backup Restaurado",
-        "EMPLEADO_CREADO": "👤 Nuevo Empleado",
-        "EMPLEADO_ELIMINADO": "❌ Empleado Eliminado",
-        "ALERTA_INVENTARIO": "📦 Alerta de Inventario"
+        "LOGIN": " Inicio de Sesión",
+        "LOGOUT": " Cierre de Sesión",
+        "ERROR_SISTEMA": " Error del Sistema",
+        "BACKUP_CREADO": " Backup Creado",
+        "BACKUP_RESTAURADO": " Backup Restaurado",
+        "EMPLEADO_CREADO": " Nuevo Empleado",
+        "EMPLEADO_ELIMINADO": " Empleado Eliminado",
+        "ALERTA_INVENTARIO": " Alerta de Inventario"
     }
 
     TIPOS_MESERO = {
-        "LOGIN": "🔐 Inicio de Sesión",
-        "LOGOUT": "🚪 Cierre de Sesión",
-        "PEDIDO_ASIGNADO": "📋 Nuevo Pedido",
-        "PEDIDO_LISTO": "✅ Pedido Listo",
-        "MESA_ASIGNADA": "🍽️ Mesa Asignada",
-        "PROPINA_RECIBIDA": "💰 Propina Recibida"
+        "LOGIN": " Inicio de Sesión",
+        "LOGOUT": " Cierre de Sesión",
+        "PEDIDO_ASIGNADO": " Nuevo Pedido",
+        "PEDIDO_LISTO": " Pedido Listo",
+        "MESA_ASIGNADA": " Mesa Asignada",
+        "PROPINA_RECIBIDA": "Propina Recibida"
     }
 
     TIPOS_COCINA = {
-        "LOGIN": "🔐 Inicio de Sesión",
-        "LOGOUT": "🚪 Cierre de Sesión",
-        "PEDIDO_NUEVO": "🔔 Nuevo Pedido",
-        "PEDIDO_URGENTE": "⚡ Pedido Urgente",
-        "INGREDIENTE_FALTANTE": "⚠️ Ingrediente Faltante"
+        "LOGIN": " Inicio de Sesión",
+        "LOGOUT": " Cierre de Sesión",
+        "PEDIDO_NUEVO": " Nuevo Pedido",
+        "PEDIDO_URGENTE": " Pedido Urgente",
+        "INGREDIENTE_FALTANTE": " Ingrediente Faltante"
     }
 
     TIPOS_INVENTARIO = {
-        "LOGIN": "🔐 Inicio de Sesión",
-        "LOGOUT": "🚪 Cierre de Sesión",
-        "STOCK_BAJO": "📉 Stock Bajo",
-        "ENTRADA_REGISTRADA": "📥 Entrada Registrada",
-        "SALIDA_REGISTRADA": "📤 Salida Registrada",
-        "MERMA_REGISTRADA": "🗑️ Merma Registrada"
+        "LOGIN": " Inicio de Sesión",
+        "LOGOUT": " Cierre de Sesión",
+        "STOCK_BAJO": " Stock Bajo",
+        "ENTRADA_REGISTRADA": " Entrada Registrada",
+        "SALIDA_REGISTRADA": " Salida Registrada",
+        "MERMA_REGISTRADA": " Merma Registrada"
     }
 
     @classmethod
     def notificar_login(cls, id_usuario, nombre_usuario, rol):
-        """Notifica inicio de sesión según el rol"""
-        mensaje = f"{nombre_usuario} ha iniciado sesión"
+        """Notifica inicio de sesión a los administradores"""
+        from models.empleado_model import Usuario
         
-        return NotificacionCommandHandler.crear_notificacion(
-            tipo="LOGIN",
-            mensaje=mensaje,
-            id_usuario=id_usuario,
-            datos_extra={
-                "rol": rol,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        )
+        mensaje = f" {nombre_usuario} ha iniciado sesión"
+        
+        # Obtener todos los administradores activos
+        admins = Usuario.find_by_rol("1")
+        
+        # Filtrar solo admins activos
+        admins_activos = [admin for admin in admins if admin.get("usuario_status") == 1]
+        
+        resultados = []
+        for admin in admins_activos:
+            resultado = NotificacionCommandHandler.crear_notificacion(
+                tipo="LOGIN",
+                mensaje=mensaje,
+                id_usuario=str(admin["_id"]),
+                datos_extra={
+                    "rol": rol,
+                    "usuario_id": id_usuario,
+                    "nombre_usuario": nombre_usuario,
+                    "timestamp": get_mexico_datetime().isoformat()
+                }
+            )
+            resultados.append(resultado)
+        
+        return {
+            "success": any(r.get("success") for r in resultados),
+            "notificaciones_enviadas": len(resultados)
+        }
 
     @classmethod
     def notificar_logout(cls, id_usuario, nombre_usuario, rol):
-        """Notifica cierre de sesión según el rol"""
-        mensaje = f"{nombre_usuario} ha cerrado sesión"
+        """Notifica cierre de sesión a los administradores"""
+        from models.empleado_model import Usuario
         
-        return NotificacionCommandHandler.crear_notificacion(
-            tipo="LOGOUT",
-            mensaje=mensaje,
-            id_usuario=id_usuario,
-            datos_extra={
-                "rol": rol,
-                "timestamp": datetime.utcnow().isoformat()
-            }
-        )
+        mensaje = f"🚪 {nombre_usuario} ha cerrado sesión"
+        
+        # Obtener todos los administradores activos
+        admins = Usuario.find_by_rol("1")
+        
+        # Filtrar solo admins activos
+        admins_activos = [admin for admin in admins if admin.get("usuario_status") == 1]
+        
+        resultados = []
+        for admin in admins_activos:
+            resultado = NotificacionCommandHandler.crear_notificacion(
+                tipo="LOGOUT",
+                mensaje=mensaje,
+                id_usuario=str(admin["_id"]),
+                datos_extra={
+                    "rol": rol,
+                    "usuario_id": id_usuario,
+                    "nombre_usuario": nombre_usuario,
+                    "timestamp": get_mexico_datetime().isoformat()
+                }
+            )
+            resultados.append(resultado)
+        
+        return {
+            "success": any(r.get("success") for r in resultados),
+            "notificaciones_enviadas": len(resultados)
+        }
 
     @classmethod
     def notificar_error(cls, id_usuario, tipo_error, descripcion):
@@ -228,7 +272,7 @@ class NotificacionSistemaHandler:
             id_usuario=id_usuario,
             datos_extra={
                 "tipo_error": tipo_error,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": get_mexico_datetime().isoformat()
             }
         )
 
@@ -244,7 +288,7 @@ class NotificacionSistemaHandler:
             id_usuario=id_usuario,
             datos_extra={
                 "archivo": nombre_archivo,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": get_mexico_datetime().isoformat()
             }
         )
 
@@ -260,7 +304,7 @@ class NotificacionSistemaHandler:
             id_usuario=id_admin,
             datos_extra={
                 "empleado": nombre_empleado,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": get_mexico_datetime().isoformat()
             }
         )
 
@@ -284,7 +328,7 @@ class NotificacionSistemaHandler:
             datos_extra={
                 "insumo": nombre_insumo,
                 "cantidad": cantidad,
-                "timestamp": datetime.utcnow().isoformat()
+                "timestamp": get_mexico_datetime().isoformat()
             }
         )
         
