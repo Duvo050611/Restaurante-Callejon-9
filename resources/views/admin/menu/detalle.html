@@ -1,0 +1,304 @@
+{% extends "layout/layout_base.html" %}
+
+{% block title %}{{ platillo.nombre }}{% endblock %}
+{% block page_title %}Detalles del Platillo{% endblock %}
+{% block page_subtitle %}Información completa del platillo{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-primary: #F2913D;
+        --color-primary-dark: #DE823D;
+        --color-secondary: #F2CA99;
+        --color-accent: #F2A399;
+        --color-dark: #0D0D0D;
+    }
+    
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: white;
+    }
+    .btn-primary:hover {
+        background-color: var(--color-primary-dark);
+    }
+    
+    .header-gradient {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    }
+    
+    .category-entrada { background-color: #10B981; color: white; }
+    .category-plato_fuerte { background-color: #F97316; color: white; }
+    .category-bebida { background-color: #3B82F6; color: white; }
+    .category-postre { background-color: #8B5CF6; color: white; }
+    .category-especial { background-color: #EC4899; color: white; }
+    
+    .picante-0 { color: #9CA3AF; }
+    .picante-1 { color: #FCD34D; }
+    .picante-2 { color: #FB923C; }
+    .picante-3 { color: #EF4444; }
+    .picante-4 { color: #991B1B; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <!-- Breadcrumb -->
+    <nav class="mb-4">
+        <ol class="flex items-center gap-2 text-sm">
+            <li>
+                <a href="{{ url_for('routes.admin_menu') }}" class="text-gray-500 hover:text-primary">
+                    <i class="bi bi-house-door"></i> Menú
+                </a>
+            </li>
+            <li class="text-gray-400">/</li>
+            <li class="text-gray-800 font-medium">{{ platillo.nombre }}</li>
+        </ol>
+    </nav>
+    
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Imagen Principal -->
+        <div class="lg:col-span-1">
+            <div class="card">
+                <div class="card-body p-0">
+                    <div class="h-64 bg-gray-100 rounded-t-lg overflow-hidden">
+                        {% if platillo.imagen %}
+                        <img src="{{ platillo.imagen }}" alt="{{ platillo.nombre }}" class="w-full h-full object-cover">
+                        {% else %}
+                        <div class="w-full h-full flex items-center justify-center">
+                            <i class="bi bi-image text-6xl text-gray-300"></i>
+                        </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="p-4">
+                        <span class="inline-block px-3 py-1 rounded-full text-sm font-semibold
+                            {% if platillo.categoria == 'entrada' %}category-entrada
+                            {% elif platillo.categoria == 'plato_fuerte' %}category-plato_fuerte
+                            {% elif platillo.categoria == 'bebida' %}category-bebida
+                            {% elif platillo.categoria == 'postre' %}category-postre
+                            {% else %}category-especial{% endif %}">
+                            {{ platillo.categoria_nombre }}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Información Principal -->
+        <div class="lg:col-span-2">
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 class="text-2xl font-bold text-gray-800">{{ platillo.nombre }}</h2>
+                            <p class="text-gray-500">ID: {{ platillo._id }}</p>
+                        </div>
+                        <div class="text-right">
+                            {% if platillo.disponible %}
+                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-green-100 text-green-800 rounded-full text-sm font-medium">
+                                <i class="bi bi-check-circle-fill"></i> Disponible
+                            </span>
+                            {% else %}
+                            <span class="inline-flex items-center gap-1 px-3 py-1 bg-red-100 text-red-800 rounded-full text-sm font-medium">
+                                <i class="bi bi-x-circle-fill"></i> No Disponible
+                            </span>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <p class="text-gray-600 mb-6">{{ platillo.descripcion or 'Sin descripción disponible' }}</p>
+                    
+                    <div class="flex items-baseline gap-2 mb-6">
+                        <span class="text-4xl font-bold text-primary">${{ "%.2f"|format(platillo.precio) }}</span>
+                    </div>
+                    
+                    <!-- Acciones -->
+                    <div class="flex gap-3">
+                        <a href="{{ url_for('routes.admin_menu_editar', platillo_id=platillo._id) }}" 
+                           class="btn-primary px-6 py-2 rounded-lg hover:opacity-90 transition">
+                            <i class="bi bi-pencil-fill"></i> Editar
+                        </a>
+                        <button onclick="toggleDisponibilidad()" 
+                                class="px-6 py-2 rounded-lg transition
+                                    {% if platillo.disponible %}bg-red-100 text-red-700 hover:bg-red-200{% else %}bg-green-100 text-green-700 hover:bg-green-200{% endif %}">
+                            {% if platillo.disponible %}
+                            <i class="bi bi-x-circle"></i> Deshabilitar
+                            {% else %}
+                            <i class="bi bi-check-circle"></i> Habilitar
+                            {% endif %}
+                        </button>
+                        <button onclick="eliminarPlatillo()" 
+                                class="px-6 py-2 bg-red-100 text-red-700 rounded-lg hover:bg-red-200 transition">
+                            <i class="bi bi-trash"></i> Eliminar
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Información Adicional -->
+            <div class="card">
+                <div class="card-header bg-gray-50">
+                    <h3 class="text-lg font-bold text-gray-800">
+                        <i class="bi bi-info-circle text-primary"></i>
+                        Información Adicional
+                    </h3>
+                </div>
+                <div class="card-body">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <!-- Tiempo de preparación -->
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                                <i class="bi bi-clock text-primary"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Tiempo de Preparación</p>
+                                <p class="font-semibold text-gray-800">
+                                    {{ platillo.tiempo_preparacion|default('N/A') }} minutos
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Nivel de picante -->
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                                <i class="bi bi-fire {% if platillo.nivel_picante %}picante-{{ platillo.nivel_picante }}{% else %}picante-0{% endif %}"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Nivel de Picante</p>
+                                <div class="flex gap-1">
+                                    {% for i in range(5) %}
+                                    <i class="bi bi-fire-fill {% if i < (platillo.nivel_picante|default(0)) %}picante-{{ platillo.nivel_picante|default(0) }}{% else %}text-gray-300{% endif %}"></i>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Fecha de creación -->
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-green-100 rounded-full flex items-center justify-center">
+                                <i class="bi bi-calendar-plus text-green-600"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Fecha de Creación</p>
+                                <p class="font-semibold text-gray-800">
+                                    {{ platillo.fecha_creacion|default('N/A') }}
+                                </p>
+                            </div>
+                        </div>
+                        
+                        <!-- Última actualización -->
+                        <div class="flex items-center gap-3">
+                            <div class="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center">
+                                <i class="bi bi-calendar-check text-blue-600"></i>
+                            </div>
+                            <div>
+                                <p class="text-sm text-gray-500">Última Actualización</p>
+                                <p class="font-semibold text-gray-800">
+                                    {{ platillo.fecha_actualizacion|default('N/A') }}
+                                </p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Alérgenos -->
+                    {% if platillo.alergenos and platillo.alergenos|length > 0 %}
+                    <div class="mt-6 pt-6 border-t">
+                        <h4 class="font-bold text-gray-800 mb-3">
+                            <i class="bi bi-exclamation-triangle text-yellow-500"></i>
+                            Alérgenos
+                        </h4>
+                        <div class="flex flex-wrap gap-2">
+                            {% for alergeno in platillo.alergenos %}
+                            <span class="px-3 py-1 bg-yellow-100 text-yellow-800 rounded-full text-sm font-medium">
+                                {{ alergeno }}
+                            </span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    <!-- Notas -->
+                    {% if platillo.notas %}
+                    <div class="mt-6 pt-6 border-t">
+                        <h4 class="font-bold text-gray-800 mb-2">
+                            <i class="bi bi-sticky text-primary"></i>
+                            Notas Adicionales
+                        </h4>
+                        <p class="text-gray-600">{{ platillo.notas }}</p>
+                    </div>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Cambiar disponibilidad
+    function toggleDisponibilidad() {
+        const platilloId = '{{ platillo._id }}';
+        const nuevoEstado = {{ 'false' if platillo.disponible else 'true' }};
+        
+        fetch(`/api/menu/${platilloId}/actualizar`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                disponible: nuevoEstado
+            })
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    title: '¡Éxito!',
+                    text: 'La disponibilidad ha sido actualizada',
+                    icon: 'success'
+                }).then(() => {
+                    location.reload();
+                });
+            } else {
+                Swal.fire('Error', data.message || 'No se pudo actualizar', 'error');
+            }
+        });
+    }
+    
+    // Eliminar platillo
+    function eliminarPlatillo() {
+        Swal.fire({
+            title: '¿Estás seguro?',
+            text: 'Esta acción no se puede deshacer',
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#EF4444',
+            cancelButtonColor: '#6B7280',
+            confirmButtonText: 'Sí, eliminar',
+            cancelButtonText: 'Cancelar'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                fetch(`/api/menu/{{ platillo._id }}/eliminar`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        Swal.fire({
+                            title: 'Eliminado',
+                            text: 'El platillo ha sido eliminado',
+                            icon: 'success'
+                        }).then(() => {
+                            window.location.href = '{{ url_for("routes.admin_menu") }}';
+                        });
+                    } else {
+                        Swal.fire('Error', data.message || 'No se pudo eliminar', 'error');
+                    }
+                });
+            }
+        });
+    }
+</script>
+{% endblock %}

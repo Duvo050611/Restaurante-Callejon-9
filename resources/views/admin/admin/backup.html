@@ -827,6 +827,20 @@
                     </div>
                 </div>
 
+                <div class="form-group">
+                    <label class="form-label">
+                        <i class="ri-lock-password-line"></i>
+                        Contraseña de Administrador
+                    </label>
+                    <input type="password" 
+                           name="admin_password" 
+                           id="adminPassword"
+                           placeholder="Ingrese la contraseña de admin" 
+                           required
+                           class="form-input">
+                    <p class="form-hint">Se requiere contraseña para crear respaldos</p>
+                </div>
+
                 <button type="submit" class="btn-submit">
                     <i class="ri-download-cloud-line"></i>
                     <span>Generar Respaldo</span>
@@ -1002,12 +1016,11 @@
                         </td>
                         <td>
                             <div style="display: flex; align-items: center; justify-content: center; gap: 0.75rem;">
-                                <a href="/static/backup/{{ file }}" 
-                                   download
-                                   class="action-btn action-btn-download"
-                                   title="Descargar">
+                                <button onclick="confirmarDescargar('{{ file }}')" 
+                                        class="action-btn action-btn-download"
+                                        title="Descargar">
                                     <i class="ri-download-2-line"></i>
-                                </a>
+                                </button>
                                 
                                 <button onclick="confirmarRestaurar('{{ file }}')" 
                                         class="action-btn action-btn-restore"
@@ -1087,6 +1100,20 @@
                        class="form-input"
                        style="padding: 1.125rem;">
             </div>
+            
+            <div class="form-group">
+                <label class="form-label">
+                    <i class="ri-lock-password-line"></i>
+                    Contraseña de Administrador
+                </label>
+                <input type="password" 
+                       name="admin_password" 
+                       placeholder="Ingrese la contraseña de admin" 
+                       required
+                       class="form-input">
+                <p class="form-hint">Se requiere contraseña para restaurar respaldos</p>
+            </div>
+            
             <button type="submit" 
                     onclick="return confirm('⚠️ ¿ESTÁS SEGURO? Esto reemplazará todos los datos actuales con el contenido del respaldo seleccionado. Esta acción NO se puede deshacer.')"
                     class="btn-submit btn-danger">
@@ -1144,11 +1171,110 @@ document.getElementById('backupForm').addEventListener('submit', function(e) {
     simulateProgress();
 });
 
-// Confirmar eliminar
-function confirmarEliminar(filename) {
+// Confirmar descargar - Primero advertencia, luego contraseña
+function confirmarDescargar(filename) {
+    // Paso 1: Mostrar advertencia
     Swal.fire({
-        title: '¿Eliminar respaldo?',
-        html: `<p style="color: #737373; font-size: 1rem;">Se eliminará: <strong>${filename}</strong></p>`,
+        title: '📥 Descargar Respaldo',
+        html: `
+            <p style="color: #737373; margin-bottom: 0.5rem;">¿Desea descargar el archivo:</p>
+            <p style="color: var(--color-dark); font-size: 1.125rem; font-weight: 700; margin-bottom: 1rem;">${filename}</p>
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#a3a3a3',
+        confirmButtonText: 'Sí, descargar',
+        cancelButtonText: 'Cancelar'
+    }).then((result) => {
+        if (result.isConfirmed) {
+            // Paso 2: Pedir contraseña después de confirmar
+            pedirContrasenaDescargar(filename);
+        }
+    });
+}
+
+// Pedir contraseña para descargar
+function pedirContrasenaDescargar(filename) {
+    Swal.fire({
+        title: '🔐 Confirmar Descarga',
+        html: `
+            <p style="color: #737373; margin-bottom: 1rem;">Ingrese la contraseña de administrador:</p>
+            <input type="password" id="swal-password-download" class="swal2-input" placeholder="Contraseña de administrador" style="width: 100%;">
+        `,
+        icon: 'info',
+        showCancelButton: true,
+        confirmButtonColor: '#10b981',
+        cancelButtonColor: '#a3a3a3',
+        confirmButtonText: 'Descargar',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const password = document.getElementById('swal-password-download').value;
+            if (!password) {
+                Swal.showValidationMessage('Debe ingresar la contraseña de administrador');
+                return false;
+            }
+            return password;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const password = result.value;
+            descargarArchivo(filename, password);
+        }
+    });
+}
+
+// Descargar archivo con validación
+async function descargarArchivo(filename, password) {
+    try {
+        const response = await fetch('/admin/backup/download-with-auth/' + encodeURIComponent(filename), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ admin_password: password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Redireccionar a la descarga
+            window.location.href = '/static/backup/' + filename;
+            Swal.fire({
+                icon: 'success',
+                title: '¡Descarga iniciada!',
+                text: 'El archivo se descargará automáticamente',
+                confirmButtonColor: '#F2913D',
+                timer: 2000
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message || 'Contraseña incorrecta',
+                confirmButtonColor: '#F2913D'
+            });
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Ocurrió un error al validar la descarga',
+            confirmButtonColor: '#F2913D'
+        });
+    }
+}
+
+// Confirmar eliminar - Primero advertencia, luego contraseña
+function confirmarEliminar(filename) {
+    // Paso 1: Mostrar advertencia
+    Swal.fire({
+        title: '🗑️ Eliminar Respaldo',
+        html: `
+            <p style="color: #737373; font-size: 1rem;">Se eliminará permanentemente:</p>
+            <p style="color: var(--color-dark); font-size: 1.25rem; font-weight: 700; margin: 1rem 0;">${filename}</p>
+            <p style="color: #dc2626; font-weight: 600;">⚠️ Esta acción no se puede deshacer</p>
+        `,
         icon: 'warning',
         showCancelButton: true,
         confirmButtonColor: '#ef4444',
@@ -1157,52 +1283,161 @@ function confirmarEliminar(filename) {
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            window.location.href = `/admin/backup/delete/${filename}`;
+            // Paso 2: Pedir contraseña después de confirmar
+            pedirContrasenaEliminar(filename);
         }
     });
 }
 
-// Confirmar restaurar
+// Pedir contraseña para eliminar
+function pedirContrasenaEliminar(filename) {
+    Swal.fire({
+        title: '🔐 Confirmar Eliminación',
+        html: `
+            <p style="color: #737373; margin-bottom: 1rem;">Ingrese la contraseña de administrador para confirmar la eliminación:</p>
+            <input type="password" id="swal-password-delete" class="swal2-input" placeholder="Contraseña de administrador" style="width: 100%;">
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#ef4444',
+        cancelButtonColor: '#a3a3a3',
+        confirmButtonText: 'Confirmar Eliminación',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const password = document.getElementById('swal-password-delete').value;
+            if (!password) {
+                Swal.showValidationMessage('Debe ingresar la contraseña de administrador');
+                return false;
+            }
+            return password;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const password = result.value;
+            eliminarArchivo(filename, password);
+        }
+    });
+}
+
+// Eliminar archivo con validación
+async function eliminarArchivo(filename, password) {
+    try {
+        const response = await fetch('/admin/backup/delete-with-auth/' + encodeURIComponent(filename), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ admin_password: password })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            Swal.fire({
+                icon: 'success',
+                title: '¡Eliminado!',
+                text: 'El respaldo ha sido eliminado correctamente',
+                confirmButtonColor: '#F2913D'
+            }).then(() => {
+                location.reload();
+            });
+        } else {
+            Swal.fire({
+                icon: 'error',
+                title: 'Error',
+                text: data.message || 'Contraseña incorrecta',
+                confirmButtonColor: '#F2913D'
+            });
+        }
+    } catch (error) {
+        Swal.fire({
+            icon: 'error',
+            title: 'Error',
+            text: 'Ocurrió un error al eliminar el archivo',
+            confirmButtonColor: '#F2913D'
+        });
+    }
+}
+
+// Confirmar restaurar - Primero advertencia, luego contraseña
 function confirmarRestaurar(filename) {
+    // Paso 1: Mostrar advertencia
     Swal.fire({
         title: '⚠️ ADVERTENCIA CRÍTICA',
         html: `
-            <div style="text-align: left; padding: 1.5rem;">
-                <p style="color: var(--color-dark); margin-bottom: 1.25rem; font-size: 1rem; font-weight: 600;">Esta acción:</p>
-                <ul style="list-style: disc; list-style-position: inside; color: #737373; margin-bottom: 1.25rem; line-height: 1.8;">
+            <div style="text-align: left; padding: 1rem;">
+                <p style="color: var(--color-dark); margin-bottom: 1rem; font-size: 1rem; font-weight: 600;">Esta acción:</p>
+                <ul style="list-style: disc; list-style-position: inside; color: #737373; margin-bottom: 1rem; line-height: 1.8;">
                     <li>Eliminará <strong>TODOS</strong> los datos actuales</li>
                     <li>Los reemplazará con: <strong style="color: var(--color-primary);">${filename}</strong></li>
                     <li><strong>NO</strong> se puede deshacer</li>
                 </ul>
-                <p style="color: #dc2626; font-weight: 700; font-size: 1.0625rem;">¿Estás absolutamente seguro?</p>
+                <p style="color: #dc2626; font-weight: 700; font-size: 1rem;">¿Estás absolutamente seguro?</p>
             </div>
         `,
         icon: 'error',
         showCancelButton: true,
         confirmButtonColor: '#dc2626',
         cancelButtonColor: '#a3a3a3',
-        confirmButtonText: 'Sí, restaurar ahora',
+        confirmButtonText: 'Sí, continuar',
         cancelButtonText: 'Cancelar'
     }).then((result) => {
         if (result.isConfirmed) {
-            restaurarArchivo(filename);
+            // Paso 2: Pedir contraseña después de confirmar
+            pedirContrasenaRestaurar(filename);
         }
     });
 }
 
-function restaurarArchivo(filename) {
+// Pedir contraseña para restaurar
+function pedirContrasenaRestaurar(filename) {
+    Swal.fire({
+        title: '🔐 Confirmar Restauración',
+        html: `
+            <p style="color: #737373; margin-bottom: 1rem;">Ingrese la contraseña de administrador para confirmar la restauración:</p>
+            <input type="password" id="swal-password-restore" class="swal2-input" placeholder="Contraseña de administrador" style="width: 100%;">
+        `,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        cancelButtonColor: '#a3a3a3',
+        confirmButtonText: 'Confirmar Restauración',
+        cancelButtonText: 'Cancelar',
+        preConfirm: () => {
+            const password = document.getElementById('swal-password-restore').value;
+            if (!password) {
+                Swal.showValidationMessage('Debe ingresar la contraseña de administrador');
+                return false;
+            }
+            return password;
+        }
+    }).then((result) => {
+        if (result.isConfirmed) {
+            const password = result.value;
+            restaurarArchivo(filename, password);
+        }
+    });
+}
+
+function restaurarArchivo(filename, password) {
     showProgress('Restaurando base de datos...', 'No cierres esta ventana');
     
     const form = document.createElement('form');
     form.method = 'POST';
     form.action = '{{ url_for("routes.admin_backup_restore") }}';
     
-    const input = document.createElement('input');
-    input.type = 'hidden';
-    input.name = 'server_file';
-    input.value = filename;
+    const inputFile = document.createElement('input');
+    inputFile.type = 'hidden';
+    inputFile.name = 'server_file';
+    inputFile.value = filename;
     
-    form.appendChild(input);
+    const inputPassword = document.createElement('input');
+    inputPassword.type = 'hidden';
+    inputPassword.name = 'admin_password';
+    inputPassword.value = password;
+    
+    form.appendChild(inputFile);
+    form.appendChild(inputPassword);
     document.body.appendChild(form);
     form.submit();
 }

@@ -1,5 +1,7 @@
 {% extends "layout/layout_base.html" %}
 
+{% block extra_css %}{% endblock %}
+
 {% block title %}
 Restauración de Sistema | Panel de Control
 {% endblock %}
@@ -71,6 +73,19 @@ Restauración de Sistema | Panel de Control
                     <span class="text-[10px] font-black text-slate-400 group-hover:text-orange-700 uppercase">Click para examinar JSON/SQL</span>
                     <span id="name_output" class="text-[9px] font-bold text-orange-600 mt-2 block italic tracking-tight"></span>
                 </label>
+            </div>
+
+            <div class="mt-4">
+                <label class="block text-[9px] font-black text-slate-400 uppercase tracking-widest">
+                    <i class="ri-lock-password-line mr-1"></i> Contraseña de Administrador
+                </label>
+                <input type="password" 
+                       name="admin_password" 
+                       id="adminPassword"
+                       placeholder="Ingrese la contraseña de admin" 
+                       required
+                       class="w-full p-4 bg-slate-50 border-2 border-transparent rounded-2xl text-[11px] font-bold focus:border-orange-500 focus:bg-white outline-none transition-all">
+                <p class="text-[9px] font-bold text-orange-600 mt-2">Se requiere contraseña para restaurar respaldos</p>
             </div>
 
             <button type="submit" onclick="return confirm('¿ESTÁS SEGURO? Se eliminarán los datos actuales.')" 

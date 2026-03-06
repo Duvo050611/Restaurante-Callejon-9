@@ -72,13 +72,23 @@ class Usuario:
 
     @classmethod
     def update_session_token(cls, user_id, token, status):
+        from datetime import datetime
+        update_data = {
+            "usuario_tokensession": token,
+            "usuario_status": status,
+            "updated_at": datetime.utcnow()
+        }
+        
+        # Si status es 1 (conectado), guardar timestamp de conexion
+        if status == 1:
+            update_data["fecha_conexion"] = datetime.utcnow()
+        # Si status es 0 (desconectado), limpiar timestamp de conexion
+        elif status == 0:
+            update_data["fecha_conexion"] = None
+        
         return cls.collection.update_one(
             {"_id": ObjectId(user_id)},
-            {"$set": {
-                "usuario_tokensession": token,
-                "usuario_status": status,
-                "updated_at": datetime.utcnow()
-            }}
+            {"$set": update_data}
         )
 
     @classmethod

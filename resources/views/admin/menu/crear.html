@@ -1,0 +1,355 @@
+{% extends "layout/layout_base.html" %}
+
+{% block title %}Crear Platillo{% endblock %}
+{% block page_title %}Crear Nuevo Platillo{% endblock %}
+{% block page_subtitle %}Agrega un nuevo platillo al menú del restaurante{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-primary: #F2913D;
+        --color-primary-dark: #DE823D;
+        --color-secondary: #F2CA99;
+        --color-accent: #F2A399;
+        --color-dark: #0D0D0D;
+    }
+    
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: white;
+    }
+    .btn-primary:hover {
+        background-color: var(--color-primary-dark);
+    }
+    
+    .header-gradient {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+    }
+    
+    .preview-image {
+        width: 100%;
+        height: 200px;
+        border: 2px dashed #d1d5db;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s;
+        background-color: #f9fafb;
+    }
+    
+    .preview-image:hover {
+        border-color: var(--color-primary);
+        background-color: #fef3c7;
+    }
+    
+    .preview-image img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        border-radius: 0.375rem;
+    }
+    
+    .ingredient-tag {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.25rem 0.75rem;
+        background-color: var(--color-secondary);
+        color: var(--color-dark);
+        border-radius: 9999px;
+        font-size: 0.875rem;
+        margin: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-5xl mx-auto">
+    <div class="card">
+        <div class="card-header header-gradient text-white">
+            <h3 class="text-xl font-bold flex items-center gap-2">
+                <i class="bi bi-plus-circle-fill"></i>
+                Formulario de Nuevo Platillo
+            </h3>
+        </div>
+        
+        <div class="card-body">
+            <form id="formCrearPlatillo" enctype="multipart/form-data">
+                <!-- Información Básica -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
+                        <i class="bi bi-info-circle text-primary"></i>
+                        Información Básica
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Nombre del Platillo *
+                            </label>
+                            <input type="text" 
+                                   name="nombre" 
+                                   id="nombre"
+                                   required
+                                   placeholder="Ej: Tacos al Pastor"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Descripción
+                            </label>
+                            <textarea name="descripcion" 
+                                      id="descripcion"
+                                      rows="3"
+                                      placeholder="Describe el platillo, ingredientes principales, etc."
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"></textarea>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Categoría *
+                            </label>
+                            <select name="categoria" 
+                                    id="categoria"
+                                    required
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                                <option value="">Selecciona una categoría</option>
+                                <option value="entrada">Entrada</option>
+                                <option value="plato_fuerte">Plato Fuerte</option>
+                                <option value="bebida">Bebida</option>
+                                <option value="postre">Postre</option>
+                                <option value="especial">Especial</option>
+                            </select>
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Precio *
+                            </label>
+                            <div class="relative">
+                                <span class="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500">$</span>
+                                <input type="number" 
+                                       name="precio" 
+                                       id="precio"
+                                       required
+                                       step="0.01"
+                                       min="0"
+                                       placeholder="0.00"
+                                       class="w-full pl-8 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Imagen -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
+                        <i class="bi bi-image text-primary"></i>
+                        Imagen del Platillo
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Imagen
+                            </label>
+                            <div class="preview-image" onclick="document.getElementById('imagen').click()">
+                                <div id="preview-placeholder" class="text-center">
+                                    <i class="bi bi-cloud-arrow-up text-4xl text-gray-400"></i>
+                                    <p class="text-gray-500 mt-2">Haz clic para subir una imagen</p>
+                                </div>
+                                <img id="preview-img" src="" alt="Preview" style="display: none;">
+                            </div>
+                            <input type="file" 
+                                   name="imagen" 
+                                   id="imagen"
+                                   accept="image/*"
+                                   class="hidden"
+                                   onchange="previewImage(this)">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                URL de Imagen (opcional)
+                            </label>
+                            <input type="url" 
+                                   name="imagen_url" 
+                                   id="imagen_url"
+                                   placeholder="https://ejemplo.com/imagen.jpg"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"
+                                   onchange="document.getElementById('imagen').value = ''; document.getElementById('preview-img').src = this.value; document.getElementById('preview-img').style.display = 'block'; document.getElementById('preview-placeholder').style.display = 'none';">
+                            <p class="text-xs text-gray-500 mt-1">Alternativa: proporciona una URL externa</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Disponibilidad -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
+                        <i class="bi bi-toggle-on text-primary"></i>
+                        Disponibilidad
+                    </h4>
+                    
+                    <div class="flex items-center gap-4">
+                        <label class="flex items-center gap-2 cursor-pointer">
+                            <input type="checkbox" 
+                                   name="disponible" 
+                                   id="disponible"
+                                   checked
+                                   class="w-5 h-5 text-primary rounded focus:ring-orange-500">
+                            <span class="text-gray-700 font-medium">Platillo disponible en el menú</span>
+                        </label>
+                    </div>
+                </div>
+                
+                <!-- Información Adicional -->
+                <div class="mb-8">
+                    <h4 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2 border-b pb-2">
+                        <i class="bi bi-sliders text-primary"></i>
+                        Información Adicional
+                    </h4>
+                    
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Tiempo de Preparación (minutos)
+                            </label>
+                            <input type="number" 
+                                   name="tiempo_preparacion" 
+                                   id="tiempo_preparacion"
+                                   min="1"
+                                   placeholder="15"
+                                   class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                        </div>
+                        
+                        <div>
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Nivel de Picante
+                            </label>
+                            <select name="nivel_picante" 
+                                    id="nivel_picante"
+                                    class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500">
+                                <option value="0">Sin picante</option>
+                                <option value="1">Poco picante</option>
+                                <option value="2">Picante medio</option>
+                                <option value="3">Muy picante</option>
+                                <option value="4">Extremo</option>
+                            </select>
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Alérgenos
+                            </label>
+                            <div class="flex flex-wrap gap-2">
+                                <label class="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200">
+                                    <input type="checkbox" name="alergenos" value="gluten" class="rounded text-primary">
+                                    <span class="text-sm">Gluten</span>
+                                </label>
+                                <label class="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200">
+                                    <input type="checkbox" name="alergenos" value="lactosa" class="rounded text-primary">
+                                    <span class="text-sm">Lactosa</span>
+                                </label>
+                                <label class="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200">
+                                    <input type="checkbox" name="alergenos" value="cacahuates" class="rounded text-primary">
+                                    <span class="text-sm">Cacahuates</span>
+                                </label>
+                                <label class="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200">
+                                    <input type="checkbox" name="alergenos" value="mariscos" class="rounded text-primary">
+                                    <span class="text-sm">Mariscos</span>
+                                </label>
+                                <label class="flex items-center gap-1 px-3 py-2 bg-gray-100 rounded-lg cursor-pointer hover:bg-gray-200">
+                                    <input type="checkbox" name="alergenos" value="huevo" class="rounded text-primary">
+                                    <span class="text-sm">Huevo</span>
+                                </label>
+                            </div>
+                        </div>
+                        
+                        <div class="md:col-span-2">
+                            <label class="block text-sm font-medium text-gray-700 mb-2">
+                                Notas adicionales
+                            </label>
+                            <textarea name="notas" 
+                                      id="notas"
+                                      rows="2"
+                                      placeholder="Notas especiales sobre el platillo"
+                                      class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-orange-500 focus:border-orange-500"></textarea>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Botones -->
+                <div class="flex justify-end gap-4 pt-4 border-t">
+                    <a href="{{ url_for('routes.admin_menu') }}" 
+                       class="px-6 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">
+                        <i class="bi bi-x-circle"></i> Cancelar
+                    </a>
+                    <button type="submit" 
+                            class="btn-primary px-8 py-2 rounded-lg hover:opacity-90 transition">
+                        <i class="bi bi-check-circle"></i> Guardar Platillo
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Preview de imagen
+    function previewImage(input) {
+        const previewImg = document.getElementById('preview-img');
+        const placeholder = document.getElementById('preview-placeholder');
+        const urlInput = document.getElementById('imagen_url');
+        
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                previewImg.src = e.target.result;
+                previewImg.style.display = 'block';
+                placeholder.style.display = 'none';
+            };
+            reader.readAsDataURL(input.files[0]);
+            urlInput.value = '';
+        }
+    }
+    
+    // Enviar formulario
+    document.getElementById('formCrearPlatillo').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const formData = new FormData(this);
+        
+        // Convertir checkboxes de alergenos
+        const alergenos = [];
+        document.querySelectorAll('input[name="alergenos"]:checked').forEach(checkbox => {
+            alergenos.push(checkbox.value);
+        });
+        formData.set('alergenos', JSON.stringify(alergenos));
+        
+        fetch('/api/menu/crear', {
+            method: 'POST',
+            body: formData
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                Swal.fire({
+                    title: '¡Éxito!',
+                    text: 'El platillo ha sido creado correctamente',
+                    icon: 'success'
+                }).then(() => {
+                    window.location.href = '{{ url_for("routes.admin_menu") }}';
+                });
+            } else {
+                Swal.fire('Error', data.message || 'No se pudo crear el platillo', 'error');
+            }
+        })
+        .catch(error => {
+            Swal.fire('Error', 'Hubo un problema al crear el platillo', 'error');
+        });
+    });
+</script>
+{% endblock %}
