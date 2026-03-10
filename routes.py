@@ -14,6 +14,7 @@ from controllers.settings.settingsController import SettingsController
 from controllers.menu.menuController import MenuController
 
 from controllers.venta.ventasController import VentasController
+from controllers.analytics.analytics_controller import AnalyticsController
 
 routes_bp = Blueprint("routes", __name__)
 
@@ -679,6 +680,66 @@ def api_corte_generar():
 def api_cortes():
     """API: Obtener cortes"""
     return VentasController.api_get_cortes()
+
+# ============================================
+#  ANALYTICS - MapReduce con MongoDB
+# ============================================
+
+@routes_bp.route("/admin/analytics")
+@login_required
+@rol_required(['1'])
+def analytics_index():
+    """Vista principal del dashboard de analytics"""
+    return AnalyticsController.index()
+
+@routes_bp.route("/api/analytics/kpis")
+@login_required
+@rol_required(['1'])
+def api_analytics_kpis():
+    """API: KPIs generales del negocio"""
+    return AnalyticsController.get_kpis()
+
+@routes_bp.route("/api/analytics/top-platillos")
+@login_required
+@rol_required(['1'])
+def api_analytics_top_platillos():
+    """API: Top platillos más vendidos (MapReduce $unwind + $group)"""
+    return AnalyticsController.get_top_platillos()
+
+@routes_bp.route("/api/analytics/ventas-por-dia")
+@login_required
+@rol_required(['1'])
+def api_analytics_ventas_dia():
+    """API: Ventas diarias últimos 30 días"""
+    return AnalyticsController.get_ventas_por_dia()
+
+@routes_bp.route("/api/analytics/metodos-pago")
+@login_required
+@rol_required(['1'])
+def api_analytics_metodos_pago():
+    """API: Distribución por método de pago"""
+    return AnalyticsController.get_ventas_por_metodo_pago()
+
+@routes_bp.route("/api/analytics/horas-pico")
+@login_required
+@rol_required(['1'])
+def api_analytics_horas_pico():
+    """API: Horas pico (MapReduce $hour)"""
+    return AnalyticsController.get_horas_pico()
+
+@routes_bp.route("/api/analytics/rendimiento-meseros")
+@login_required
+@rol_required(['1'])
+def api_analytics_meseros():
+    """API: Rendimiento por mesero"""
+    return AnalyticsController.get_rendimiento_meseros()
+
+@routes_bp.route("/api/analytics/ventas-por-mesa")
+@login_required
+@rol_required(['1'])
+def api_analytics_ventas_mesa():
+    """API: Consumo promedio y total por número de mesa"""
+    return AnalyticsController.get_ventas_por_mesa()
 
 # ============================================
 #  MÓDULO DE SEGURIDAD Y BACKUP

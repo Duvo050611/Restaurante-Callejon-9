@@ -303,6 +303,14 @@
                     <span>Reportes</span>
                 </a>
                 
+                <!-- Analytics -->
+                {% if session.usuario_rol == '1' %}
+                <a href="{{ url_for('routes.analytics_index') }}" class="nav-link" id="nav-analytics">
+                    <i class="bi bi-bar-chart-line text-lg"></i>
+                    <span>Analytics</span>
+                </a>
+                {% endif %}
+                
                 <!-- Configuracion -->
                 <a href="{{ url_for('routes.settings') }}" class="nav-link" id="nav-settings">
                     <i class="bi bi-gear text-lg"></i>
@@ -503,6 +511,7 @@
             const pathMap = {
                 '/admin/dashboard': 'nav-dashboard',
                 '/admin/reportes': 'nav-reportes',
+                '/admin/analytics': 'nav-analytics',
                 '/settings': 'nav-settings'
             };
             
