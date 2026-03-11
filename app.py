@@ -20,18 +20,14 @@ from routes import routes_bp
 os.environ["PYSPARK_PYTHON"] = sys.executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
 
-# ================================
-# FLASK
-# ================================
-app = Flask(
-    __name__,
-    template_folder="resources/views",
-    static_folder="static"
-)
+# Inicialización de Flask
+# En app.py
+app = Flask(__name__, template_folder="resources/views", static_folder="static")
 
-# ================================
-# CORS
-# ================================
+# Configuración de caché para evitar acumulación
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0  # Deshabilitar cache de archivos estáticos
+# Configuración de CORS
 lista_origenes = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
@@ -68,13 +64,40 @@ app.secret_key = os.getenv(
 session_dir = os.path.join(os.getcwd(), "flask_session")
 os.makedirs(session_dir, exist_ok=True)
 
+# Limpiar sesiones antiguas al iniciar (más de 24 horas)
+import time
+try:
+    for archivo in os.listdir(session_dir):
+        filepath = os.path.join(session_dir, archivo)
+        if os.path.isfile(filepath):
+            # Eliminar archivos de sesión mayores a 24 horas
+            if os.path.getmtime(filepath) < time.time() - 86400:
+                os.remove(filepath)
+                print(f"🗑️  Sesión antigua eliminada: {archivo}")
+except Exception as e:
+    print(f"⚠️  Error limpiando sesiones: {e}")
+
+# Limpiar sesiones antiguas al iniciar (más de 24 horas)
+import time
+try:
+    for archivo in os.listdir(session_dir):
+        filepath = os.path.join(session_dir, archivo)
+        if os.path.isfile(filepath):
+            # Eliminar archivos de sesión mayores a 24 horas
+            if os.path.getmtime(filepath) < time.time() - 86400:
+                os.remove(filepath)
+                print(f"🗑️  Sesión antigua eliminada: {archivo}")
+except Exception as e:
+    print(f"⚠️  Error limpiando sesiones: {e}")
+
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_FILE_DIR"] = session_dir
-app.config["SESSION_PERMANENT"] = True
+app.config["SESSION_PERMANENT"] = False  # Cambiado a False para que las sesiones expiren
 app.config["SESSION_USE_SIGNER"] = True
 app.config["SESSION_COOKIE_SECURE"] = False
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_NAME"] = "callejon9_session"
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
 # Inicializar extensión de sesiones
 Session(app)
@@ -131,16 +154,29 @@ if __name__ == "__main__":
     import socket
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
-
+    
+    # Determinar si estamos en Windows
+    import platform
+    is_windows = platform.system() == "Windows"
+    
     print("=" * 60)
     print("🍽️ CALLEJÓN 9 - SOCKET.IO ACTIVO")
     print(f"📍 http://127.0.0.1:5000")
     print(f"📍 http://{local_ip}:5000")
     print("=" * 60)
-
-    socketio.run(
-        app,
-        host="0.0.0.0",
+    
+    # Configuración del reloader
+    # En Windows, el reloader de Werkzeug puede causar el error WinError 10038
+    # Se recomienda desactivarlo o usar threaded=True para mayor estabilidad
+    reloader_config = not is_windows  # Desactivar reloader en Windows
+    
+    print(f"🔄 Auto-reload: {'Activado' if reloader_config else 'Desactivado (Windows)'}")
+    print("=" * 60 + "\n")
+    
+    app.run(
+        debug=True,
+        use_reloader=reloader_config,
+        host='0.0.0.0',
         port=5000,
-        debug=True
+        threaded=True  # Mejor estabilidad en Windows
     )

@@ -2,6 +2,121 @@
 
 {% block title %}Reportes - Restaurante Callejón 9{% endblock %}
 
+{% block extra_css %}
+<style>
+    :root {
+        --color-primary: #F2913D;
+        --color-primary-dark: #DE823D;
+        --color-secondary: #F2CA99;
+        --color-accent: #F2A399;
+        --color-dark: #0D0D0D;
+    }
+    
+    /* Botones principales */
+    .btn-primary, .btn-summary {
+        background-color: var(--color-primary) !important;
+        color: white !important;
+        border: none;
+    }
+    .btn-primary:hover, .btn-summary:hover {
+        background-color: var(--color-primary-dark) !important;
+    }
+    
+    /* Header */
+    .reports-header {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)) !important;
+        color: white;
+        padding: 2rem;
+        border-radius: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .reports-header h1 {
+        color: white !important;
+    }
+    .reports-header .subtitle {
+        color: rgba(255,255,255,0.9) !important;
+    }
+    
+    /* Tarjetas de reportes */
+    .report-card {
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    .report-card:hover {
+        border-color: var(--color-primary) !important;
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px -5px rgba(242, 145, 61, 0.3);
+    }
+    .report-card .card-icon {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)) !important;
+        width: 60px;
+        height: 60px;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: white;
+        font-size: 1.5rem;
+    }
+    
+    /* Links en listas de reportes */
+    .report-list a:hover {
+        color: var(--color-primary) !important;
+    }
+    .report-list a i {
+        color: var(--color-primary);
+    }
+    
+    /* Filtros */
+    .filter-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 1.5rem;
+    }
+    
+    .filter-group label {
+        color: #374151;
+        font-weight: 500;
+    }
+    
+    .filter-group input, .filter-group select {
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+    .filter-group input:focus, .filter-group select:focus {
+        border-color: var(--color-primary) !important;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 145, 61, 0.2);
+    }
+    
+    /* Botones de exportar */
+    .btn-export {
+        background-color: var(--color-secondary) !important;
+        color: var(--color-dark) !important;
+    }
+    .btn-export:hover {
+        background-color: var(--color-primary) !important;
+        color: white !important;
+    }
+    
+    /* Sección de gráficos */
+    .charts-section h2 {
+        color: var(--color-primary);
+    }
+    .chart-container {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+    }
+    .chart-container h3 {
+        color: #374151;
+        border-bottom: 2px solid var(--color-primary);
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="reports-container">
     <!-- Header -->

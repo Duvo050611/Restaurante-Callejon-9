@@ -2,6 +2,125 @@
 
 {% block title %}Reportes de Inventario - Restaurante Callejón 9{% endblock %}
 
+{% block extra_css %}
+<style>
+    :root {
+        --color-primary: #F2913D;
+        --color-primary-dark: #DE823D;
+        --color-secondary: #F2CA99;
+        --color-accent: #F2A399;
+        --color-dark: #0D0D0D;
+    }
+    
+    /* Botones */
+    .btn-primary {
+        background-color: var(--color-primary) !important;
+        color: white !important;
+        border: none;
+    }
+    .btn-primary:hover {
+        background-color: var(--color-primary-dark) !important;
+    }
+    
+    .btn-sm {
+        background-color: var(--color-secondary);
+        color: var(--color-dark);
+        border: none;
+    }
+    .btn-sm:hover {
+        background-color: var(--color-primary);
+        color: white;
+    }
+    
+    /* Header de página */
+    .page-header {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)) !important;
+        color: white;
+        padding: 2rem;
+        border-radius: 0.75rem;
+        margin-bottom: 1.5rem;
+    }
+    .page-header h1 {
+        color: white !important;
+    }
+    .page-header .subtitle {
+        color: rgba(255,255,255,0.9) !important;
+    }
+    .page-header .back-link {
+        color: white !important;
+    }
+    .page-header .back-link:hover {
+        color: var(--color-secondary) !important;
+    }
+    
+    /* Filtros */
+    .filter-section {
+        background: white;
+        padding: 1.5rem;
+        border-radius: 0.75rem;
+        border: 1px solid #e5e7eb;
+        margin-bottom: 1.5rem;
+    }
+    
+    .filter-group label {
+        color: #374151;
+        font-weight: 500;
+    }
+    
+    .filter-group input, .filter-group select {
+        border: 1px solid #d1d5db;
+        border-radius: 0.5rem;
+        padding: 0.5rem 0.75rem;
+    }
+    .filter-group input:focus, .filter-group select:focus {
+        border-color: var(--color-primary) !important;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 145, 61, 0.2);
+    }
+    
+    /* Tablas */
+    .data-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+    .data-table th {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+        color: white;
+        padding: 1rem;
+        text-align: left;
+    }
+    .data-table td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #e5e7eb;
+    }
+    .data-table tr:hover {
+        background-color: #fef3c7;
+    }
+    
+    /* Alertas de stock */
+    .alert-low {
+        background-color: #fee2e2;
+        border-left: 4px solid #ef4444;
+    }
+    .alert-warning {
+        background-color: #fef3c7;
+        border-left: 4px solid #f59e0b;
+    }
+    
+    /* Chart containers */
+    .chart-wrapper {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        padding: 1rem;
+    }
+    .chart-wrapper h3 {
+        color: var(--color-primary);
+        border-bottom: 2px solid var(--color-primary);
+        padding-bottom: 0.5rem;
+    }
+</style>
+{% endblock %}
+
 {% block content %}
 <div class="reports-container">
     <div class="page-header">

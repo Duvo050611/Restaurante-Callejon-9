@@ -279,8 +279,8 @@
                     <span>Centro de Control</span>
                 </a>
                 
-                <!-- Menu (pendiente de implementar) -->
-                <a href="#" class="nav-link" id="nav-menu">
+                <!-- Menu -->
+                <a href="{{ url_for('routes.admin_menu') }}" class="nav-link" id="nav-menu">
                     <i class="bi bi-journal-text text-lg"></i>
                     <span>Menu</span>
                 </a>
@@ -291,8 +291,8 @@
                     <span>Inventario</span>
                 </a>
                 
-                <!-- Ventas (pendiente de implementar) -->
-                <a href="#" class="nav-link" id="nav-ventas">
+                <!-- Ventas -->
+                <a href="{{ url_for('routes.ventas_dashboard') }}" class="nav-link" id="nav-ventas">
                     <i class="bi bi-cash-stack text-lg"></i>
                     <span>Ventas</span>
                 </a>
@@ -302,6 +302,14 @@
                     <i class="bi bi-graph-up text-lg"></i>
                     <span>Reportes</span>
                 </a>
+                
+                <!-- Analytics -->
+                {% if session.usuario_rol == '1' %}
+                <a href="{{ url_for('routes.analytics_index') }}" class="nav-link" id="nav-analytics">
+                    <i class="bi bi-bar-chart-line text-lg"></i>
+                    <span>Analytics</span>
+                </a>
+                {% endif %}
                 
                 <!-- Configuracion -->
                 <a href="{{ url_for('routes.settings') }}" class="nav-link" id="nav-settings">
@@ -503,6 +511,7 @@
             const pathMap = {
                 '/admin/dashboard': 'nav-dashboard',
                 '/admin/reportes': 'nav-reportes',
+                '/admin/analytics': 'nav-analytics',
                 '/settings': 'nav-settings'
             };
             

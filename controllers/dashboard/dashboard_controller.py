@@ -125,10 +125,12 @@ class DashboardController:
         if "usuario_rol" not in session or str(session["usuario_rol"]) != "1":
             return redirect(url_for("routes.login"))
             
-        empleados = Usuario.find_activos()
+        # Obtener TODOS los empleados (no solo activos)
+        empleados = list(db.usuarios.find({"usuario_rol": {"$in": ["1", "2", "3", "4"]}}))
         
         for emp in empleados:
             emp["rol_nombre"] = RolPermisos.get_nombre_rol(emp.get("usuario_rol"))
+            emp["_id"] = str(emp["_id"])  # Convertir ObjectId a string
         
         return render_template("admin/empleados/lista.html", empleados=empleados)
 
@@ -229,6 +231,76 @@ class DashboardController:
                 }), 500
         
         return render_template("admin/empleados/crear.html")
+
+    @staticmethod
+    def empleados_editar(empleado_id):
+        """Formulario de edición de empleado"""
+        if "usuario_rol" not in session or str(session["usuario_rol"]) != "1":
+            return redirect(url_for("routes.login"))
+
+        try:
+            from bson.objectid import ObjectId
+            
+            # Obtener el empleado
+            empleado = db.usuarios.find_one({
+                "_id": ObjectId(empleado_id),
+                "usuario_rol": {"$in": ["1", "2", "3", "4"]}
+            })
+
+            if not empleado:
+                return "Empleado no encontrado", 404
+
+            empleado["id"] = str(empleado["_id"])
+            empleado["rol_nombre"] = RolPermisos.get_nombre_rol(empleado.get("usuario_rol"))
+
+            if request.method == "POST":
+                data = request.get_json()
+
+                update_data = {}
+
+                if 'nombre' in data:
+                    update_data['usuario_nombre'] = data['nombre']
+                if 'apellidos' in data:
+                    update_data['usuario_apellidos'] = data['apellidos']
+                if 'email' in data:
+                    update_data['usuario_email'] = data['email'].lower()
+                if 'telefono' in data:
+                    update_data['usuario_telefono'] = data['telefono']
+                if 'rol' in data:
+                    if data['rol'] not in ["1", "2", "3", "4"]:
+                        return jsonify({
+                            "success": False,
+                            "message": "Rol no válido"
+                        }), 400
+                    update_data['usuario_rol'] = data['rol']
+                if 'status' in data:
+                    update_data['usuario_status'] = int(data['status'])
+
+                # Si se proporciona una nueva contraseña
+                if 'password' in data and data['password']:
+                    from services.security.password_service import PasswordService
+                    update_data['usuario_clave'] = PasswordService.hash_password(data['password'])
+
+                update_data['updated_at'] = datetime.utcnow()
+
+                db.usuarios.update_one(
+                    {"_id": ObjectId(empleado_id)},
+                    {"$set": update_data}
+                )
+
+                return jsonify({
+                    "success": True,
+                    "message": "Empleado actualizado correctamente"
+                })
+
+            return render_template("admin/empleados/editar.html", empleado=empleado)
+
+        except Exception as e:
+            print(f"Error al editar empleado: {e}")
+            return jsonify({
+                "success": False,
+                "message": "Error al editar empleado"
+            }), 500
 
     @staticmethod
     def reportes():

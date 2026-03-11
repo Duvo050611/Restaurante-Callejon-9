@@ -21,6 +21,11 @@ from models.comanda_model import Comanda
 from models.producto_model import Producto
 from config.db import db
 from controllers.settings.settingsController import SettingsController
+
+from controllers.menu.menuController import MenuController
+
+from controllers.venta.ventasController import VentasController
+from controllers.analytics.analytics_controller import AnalyticsController
 from controllers.pago.mercadoPagoController import MercadoPagoController
 
 routes_bp = Blueprint("routes", __name__)
@@ -71,6 +76,41 @@ def api_dashboard_personal():
 def api_empleados_todos():
     """API endpoint para obtener todos los empleados"""
     return DashboardAPIController.get_todos_empleados()
+
+@routes_bp.route("/api/empleados/<empleado_id>/detalle")
+@login_required
+@rol_required(['1'])
+def api_empleado_detalle(empleado_id):
+    """API endpoint para obtener detalle de un empleado"""
+    return DashboardAPIController.get_empleado_detalle(empleado_id)
+
+@routes_bp.route("/api/empleados/<empleado_id>/eliminar", methods=["POST"])
+@login_required
+@rol_required(['1'])
+def api_empleado_eliminar(empleado_id):
+    """API endpoint para eliminar un empleado"""
+    return DashboardAPIController.eliminar_empleado(empleado_id)
+
+@routes_bp.route("/api/empleados/<empleado_id>/actualizar", methods=["POST"])
+@login_required
+@rol_required(['1'])
+def api_empleado_actualizar(empleado_id):
+    """API endpoint para actualizar un empleado"""
+    return DashboardAPIController.actualizar_empleado(empleado_id)
+
+@routes_bp.route("/api/empleados/<empleado_id>/desconectar", methods=["POST"])
+@login_required
+@rol_required(['1'])
+def api_empleado_desconectar(empleado_id):
+    """API endpoint para desconectar manualmente a un usuario"""
+    return DashboardAPIController.desconectar_usuario(empleado_id)
+
+@routes_bp.route("/admin/empleados/editar/<empleado_id>", methods=["GET", "POST"])
+@login_required
+@rol_required(['1'])
+def admin_empleados_editar(empleado_id):
+    """Página para editar un empleado"""
+    return DashboardController.empleados_editar(empleado_id)
 
 # ============================================
 #  API NOTIFICACIONES
@@ -196,6 +236,99 @@ def admin_empleados_lista():
 @rol_required(['1'])
 def admin_empleados_crear():
     return DashboardController.empleados_crear()
+
+# --- Gestión de Menú ---
+@routes_bp.route("/admin/menu")
+@login_required
+@rol_required(['1'])
+def admin_menu():
+    """Página principal del menú"""
+    return MenuController.index()
+
+@routes_bp.route("/admin/menu/crear", methods=["GET", "POST"])
+@login_required
+@rol_required(['1'])
+def admin_menu_crear():
+    """Página para crear un nuevo platillo"""
+    return MenuController.crear()
+
+@routes_bp.route("/admin/menu/editar/<platillo_id>", methods=["GET", "POST"])
+@login_required
+@rol_required(['1'])
+def admin_menu_editar(platillo_id):
+    """Página para editar un platillo"""
+    return MenuController.editar(platillo_id)
+
+@routes_bp.route("/admin/menu/detalle/<platillo_id>")
+@login_required
+@rol_required(['1'])
+def admin_menu_detalle(platillo_id):
+    """Página de detalles de un platillo"""
+    return MenuController.detalle(platillo_id)
+
+@routes_bp.route("/admin/menu/categorias")
+@login_required
+@rol_required(['1'])
+def admin_menu_categorias():
+    """Página de gestión de categorías"""
+    return MenuController.categorias()
+
+# API: Menú
+@routes_bp.route("/api/menu/crear", methods=["POST"])
+@login_required
+@rol_required(['1'])
+def api_menu_crear():
+    """API para crear un platillo"""
+    return MenuController.api_crear_platillo()
+
+@routes_bp.route("/api/menu/<platillo_id>/actualizar", methods=["POST"])
+@login_required
+@rol_required(['1'])
+def api_menu_actualizar(platillo_id):
+    """API para actualizar un platillo"""
+    return MenuController.api_actualizar_platillo(platillo_id)
+
+@routes_bp.route("/api/menu/<platillo_id>/eliminar", methods=["POST"])
+@login_required
+@rol_required(['1'])
+def api_menu_eliminar(platillo_id):
+    """API para eliminar un platillo"""
+    return MenuController.api_eliminar_platillo(platillo_id)
+
+@routes_bp.route("/api/menu/buscar")
+@login_required
+@rol_required(['1', '2'])
+def api_menu_buscar():
+    """API para buscar platillos"""
+    return MenuController.api_buscar_platillos()
+
+@routes_bp.route("/api/menu/<platillo_id>")
+@login_required
+@rol_required(['1', '2', '3'])
+def api_menu_get_platillo(platillo_id):
+    """API para obtener un platillo"""
+    return MenuController.api_get_platillo(platillo_id)
+
+@routes_bp.route("/api/menu")
+@login_required
+@rol_required(['1', '2', '3'])
+def api_menu():
+    """API para obtener el menú completo"""
+    return MenuController.api_get_menu()
+
+@routes_bp.route("/api/menu/<platillo_id>/toggle", methods=["POST"])
+@login_required
+@rol_required(['1'])
+def api_menu_toggle(platillo_id):
+    """API para cambiar disponibilidad de un platillo"""
+    return MenuController.api_toggle_platillo(platillo_id)
+
+@routes_bp.route("/api/categorias")
+@login_required
+@rol_required(['1'])
+def api_categorias():
+    """API para obtener categorías"""
+    return MenuController.api_get_categorias()
 
 # --- Reportes y Analítica ---
 @routes_bp.route("/support/reportes")
@@ -560,6 +693,197 @@ def inventario_reportes():
     return InventarioController.reportes()
 
 # ============================================
+#  VENTAS / CAJA
+# ============================================
+
+# Dashboard de Ventas
+@routes_bp.route("/ventas")
+@login_required
+@rol_required(['1', '2'])
+def ventas_dashboard():
+    """Dashboard de ventas"""
+    return VentasController.dashboard()
+
+# Nueva Venta
+@routes_bp.route("/ventas/nueva", methods=["GET", "POST"])
+@login_required
+@rol_required(['1', '2'])
+def ventas_nueva():
+    """Nueva venta"""
+    return VentasController.nueva_venta()
+
+# Cuentas Abiertas
+@routes_bp.route("/ventas/cuentas")
+@login_required
+@rol_required(['1', '2'])
+def ventas_cuentas():
+    """Lista de cuentas abiertas"""
+    return VentasController.cuentas()
+
+# Cerrar Cuenta
+@routes_bp.route("/ventas/cerrar/<cuenta_id>", methods=["GET", "POST"])
+@login_required
+@rol_required(['1', '2'])
+def ventas_cerrar_cuenta(cuenta_id):
+    """Cerrar una cuenta"""
+    return VentasController.cerrar_cuenta(cuenta_id)
+
+# Corte de Caja
+@routes_bp.route("/ventas/corte")
+@login_required
+@rol_required(['1'])
+def ventas_corte():
+    """Corte de caja"""
+    return VentasController.corte_caja()
+
+# API: Ventas
+@routes_bp.route("/api/ventas", methods=["GET"])
+@login_required
+@rol_required(['1', '2'])
+def api_ventas():
+    """API: Obtener ventas"""
+    return VentasController.api_get_ventas()
+
+@routes_bp.route("/api/ventas/crear", methods=["POST"])
+@login_required
+@rol_required(['1', '2'])
+def api_ventas_crear():
+    """API: Crear venta"""
+    return VentasController.api_crear_venta()
+
+@routes_bp.route("/api/ventas/<venta_id>", methods=["GET"])
+@login_required
+@rol_required(['1', '2'])
+def api_venta_detalle(venta_id):
+    """API: Obtener venta"""
+    return VentasController.api_get_venta(venta_id)
+
+@routes_bp.route("/api/ventas/<venta_id>/actualizar", methods=["POST"])
+@login_required
+@rol_required(['1', '2'])
+def api_venta_actualizar(venta_id):
+    """API: Actualizar venta"""
+    return VentasController.api_actualizar_venta(venta_id)
+
+@routes_bp.route("/api/ventas/<venta_id>/completar", methods=["POST"])
+@login_required
+@rol_required(['1', '2'])
+def api_venta_completar(venta_id):
+    """API: Completar venta"""
+    return VentasController.api_completar_venta(venta_id)
+
+@routes_bp.route("/api/ventas/<venta_id>/cancelar", methods=["POST"])
+@login_required
+@rol_required(['1'])
+def api_venta_cancelar(venta_id):
+    """API: Cancelar venta"""
+    return VentasController.api_cancelar_venta(venta_id)
+
+@routes_bp.route("/api/ventas/<venta_id>/eliminar", methods=["POST"])
+@login_required
+@rol_required(['1'])
+def api_venta_eliminar(venta_id):
+    """API: Eliminar venta"""
+    return VentasController.api_eliminar_venta(venta_id)
+
+@routes_bp.route("/api/ventas/estadisticas", methods=["GET"])
+@login_required
+@rol_required(['1', '2'])
+def api_ventas_estadisticas():
+    """API: Estadísticas de ventas"""
+    return VentasController.api_get_estadisticas()
+
+# API: Cuentas
+@routes_bp.route("/api/cuentas", methods=["GET"])
+@login_required
+@rol_required(['1', '2'])
+def api_cuentas():
+    """API: Obtener cuentas"""
+    return VentasController.api_get_cuentas()
+
+@routes_bp.route("/api/cuentas/<cuenta_id>/cerrar", methods=["POST"])
+@login_required
+@rol_required(['1', '2'])
+def api_cuenta_cerrar(cuenta_id):
+    """API: Cerrar cuenta"""
+    return VentasController.api_cerrar_cuenta(cuenta_id)
+
+# API: Corte de Caja
+@routes_bp.route("/api/corte/generar", methods=["POST"])
+@login_required
+@rol_required(['1'])
+def api_corte_generar():
+    """API: Generar corte de caja"""
+    return VentasController.api_generar_corte()
+
+@routes_bp.route("/api/cortes", methods=["GET"])
+@login_required
+@rol_required(['1'])
+def api_cortes():
+    """API: Obtener cortes"""
+    return VentasController.api_get_cortes()
+
+# ============================================
+#  ANALYTICS - MapReduce con MongoDB
+# ============================================
+
+@routes_bp.route("/admin/analytics")
+@login_required
+@rol_required(['1'])
+def analytics_index():
+    """Vista principal del dashboard de analytics"""
+    return AnalyticsController.index()
+
+@routes_bp.route("/api/analytics/kpis")
+@login_required
+@rol_required(['1'])
+def api_analytics_kpis():
+    """API: KPIs generales del negocio"""
+    return AnalyticsController.get_kpis()
+
+@routes_bp.route("/api/analytics/top-platillos")
+@login_required
+@rol_required(['1'])
+def api_analytics_top_platillos():
+    """API: Top platillos más vendidos (MapReduce $unwind + $group)"""
+    return AnalyticsController.get_top_platillos()
+
+@routes_bp.route("/api/analytics/ventas-por-dia")
+@login_required
+@rol_required(['1'])
+def api_analytics_ventas_dia():
+    """API: Ventas diarias últimos 30 días"""
+    return AnalyticsController.get_ventas_por_dia()
+
+@routes_bp.route("/api/analytics/metodos-pago")
+@login_required
+@rol_required(['1'])
+def api_analytics_metodos_pago():
+    """API: Distribución por método de pago"""
+    return AnalyticsController.get_ventas_por_metodo_pago()
+
+@routes_bp.route("/api/analytics/horas-pico")
+@login_required
+@rol_required(['1'])
+def api_analytics_horas_pico():
+    """API: Horas pico (MapReduce $hour)"""
+    return AnalyticsController.get_horas_pico()
+
+@routes_bp.route("/api/analytics/rendimiento-meseros")
+@login_required
+@rol_required(['1'])
+def api_analytics_meseros():
+    """API: Rendimiento por mesero"""
+    return AnalyticsController.get_rendimiento_meseros()
+
+@routes_bp.route("/api/analytics/ventas-por-mesa")
+@login_required
+@rol_required(['1'])
+def api_analytics_ventas_mesa():
+    """API: Consumo promedio y total por número de mesa"""
+    return AnalyticsController.get_ventas_por_mesa()
+
+# ============================================
 #  MÓDULO DE SEGURIDAD Y BACKUP
 # ============================================
 
@@ -583,6 +907,20 @@ def admin_backup_create():
 @rol_required(['1'])
 def admin_backup_delete(filename):
     return BackupController.delete_file(filename)
+
+# Eliminación de Archivo con Autenticación (JSON)
+@routes_bp.route('/admin/backup/delete-with-auth/<filename>', methods=['POST'])
+@login_required
+@rol_required(['1'])
+def admin_backup_delete_with_auth(filename):
+    return BackupController.delete_file_with_auth()
+
+# Descarga con Autenticación (JSON)
+@routes_bp.route('/admin/backup/download-with-auth/<filename>', methods=['POST'])
+@login_required
+@rol_required(['1'])
+def admin_backup_download_with_auth(filename):
+    return BackupController.download_with_auth()
 
 # Restauración
 @routes_bp.route('/admin/backup/restore', methods=['POST'])
