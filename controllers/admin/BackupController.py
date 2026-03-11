@@ -1,19 +1,31 @@
 import os
 import json
 from datetime import datetime, timedelta
-from flask import render_template, request, redirect, url_for, flash, jsonify, send_file
+from flask import render_template, request, redirect, url_for, flash, jsonify, send_file, session
 from bson import json_util
 from config.db import db
+from controllers.notificaciones.notificacion_controller import NotificacionSistemaController
 import zipfile
 import threading
 import schedule
 import time
+from dotenv import load_dotenv
+
+# Cargar variables de entorno
+load_dotenv()
 
 class BackupController:
     
-    # Variable de clase para el thread de auto-backup
     _backup_thread = None
     _backup_running = False
+    
+    @staticmethod
+    def _validate_admin_password(password):
+        """Validar contraseña de administrador para operaciones sensibles"""
+        admin_password = os.environ.get('ADMIN_RESTORE_PASSWORD')
+        if not admin_password:
+            return True
+        return password == admin_password
     
     @staticmethod
     def index():
@@ -22,11 +34,9 @@ class BackupController:
         if not os.path.exists(backup_dir): 
             os.makedirs(backup_dir)
         
-        # Obtener SOLO los nombres de archivos (strings) - NO diccionarios
         all_files = []
         try:
             files_in_dir = os.listdir(backup_dir)
-            # Filtrar solo archivos (no directorios) y ordenar por fecha de modificación
             all_files = sorted(
                 [f for f in files_in_dir if os.path.isfile(os.path.join(backup_dir, f))],
                 key=lambda x: os.path.getmtime(os.path.join(backup_dir, x)),
@@ -67,9 +77,15 @@ class BackupController:
         # Obtener configuración de auto-backup
         auto_backup_config = db.configuracion.find_one({"tipo": "auto_backup"}) or {}
         
+        if auto_backup_config.get('enabled'):
+            BackupController._schedule_auto_backups(
+                auto_backup_config.get('frequency', 'daily'),
+                auto_backup_config.get('hour', '02:00')
+            )
+        
         return render_template(
             "admin/admin/backup.html", 
-            files=files,  # ✅ Lista de STRINGS, NO diccionarios
+            files=files,
             collections=collections,
             page=page,
             total_pages=total_pages,
@@ -80,6 +96,15 @@ class BackupController:
     @staticmethod
     def create():
         """Crear respaldo manual"""
+        admin_password = request.form.get('admin_password')
+        if not admin_password:
+            flash("Se requiere contraseña de administrador para crear un respaldo", "error")
+            return redirect(url_for('routes.admin_backup_view'))
+        
+        if not BackupController._validate_admin_password(admin_password):
+            flash("Contraseña de administrador incorrecta", "error")
+            return redirect(url_for('routes.admin_backup_view'))
+        
         backup_dir = os.path.join('static', 'backup')
         if not os.path.exists(backup_dir):
             os.makedirs(backup_dir)
@@ -95,7 +120,7 @@ class BackupController:
         
         # Validar que se haya seleccionado al menos una colección
         if not selected_collections:
-            flash("❌ Debes seleccionar al menos una colección para respaldar", "error")
+            flash("Debes seleccionar al menos una colección para respaldar", "error")
             return redirect(url_for('routes.admin_backup_view'))
         
         # Generar nombre de archivo
@@ -140,11 +165,29 @@ class BackupController:
                 # Eliminar temporal
                 os.remove(temp_json)
             
-            flash(f"✅ Respaldo '{filename}' generado con éxito. Total de colecciones: {len(selected_collections)}", "success")
+            flash(f"Respaldo '{filename}' generado con éxito. Total de colecciones: {len(selected_collections)}", "success")
+            
+            try:
+                NotificacionSistemaController.notificar_backup_creado(
+                    usuario_id=session.get("usuario_id"),
+                    nombre_archivo=filename
+                )
+            except Exception as notif_error:
+                print(f"⚠️ Error al notificar backup: {notif_error}")
             
         except Exception as e:
             print(f"❌ Error al generar respaldo: {str(e)}")
             flash(f"❌ Error al generar respaldo: {str(e)}", "error")
+            
+            # NOTIFICAR ERROR
+            try:
+                NotificacionSistemaController.notificar_error(
+                    usuario_id=session.get("usuario_id"),
+                    tipo_error="BACKUP_ERROR",
+                    descripcion=str(e)
+                )
+            except Exception as notif_error:
+                print(f"⚠️ Error al notificar error: {notif_error}")
 
         return redirect(url_for('routes.admin_backup_view'))
 
@@ -162,24 +205,103 @@ class BackupController:
             print(f"Error al eliminar: {str(e)}")
             flash(f"❌ Error al eliminar: {str(e)}", "error")
         return redirect(url_for('routes.admin_backup_view'))
-
+    
     @staticmethod
-    def restore_view():
-        """Vista de restauración"""
-        backup_dir = os.path.join('static', 'backup')
-        files = []
+    def delete_file_with_auth():
+        """Eliminar archivo de respaldo con validación de contraseña"""
+        # Obtener el nombre del archivo de la URL
+        filename = request.view_args.get('filename', '')
         
-        if os.path.exists(backup_dir):
-            files = sorted(
-                [f for f in os.listdir(backup_dir) if f.endswith(('.json', '.zip'))],
-                reverse=True
-            )
+        # Validar contraseña
+        try:
+            data = request.get_json()
+            admin_password = data.get('admin_password') if data else None
+        except:
+            admin_password = None
         
-        return render_template("admin/admin/restore.html", files=files)
+        if not admin_password:
+            return jsonify({
+                "success": False,
+                "message": "Se requiere contraseña de administrador"
+            })
+        
+        if not BackupController._validate_admin_password(admin_password):
+            return jsonify({
+                "success": False,
+                "message": "Contraseña de administrador incorrecta"
+            })
+        
+        # Validar que el archivo existe
+        file_path = os.path.join('static', 'backup', filename)
+        if not os.path.exists(file_path):
+            return jsonify({
+                "success": False,
+                "message": "El archivo no existe"
+            })
+        
+        try:
+            os.remove(file_path)
+            return jsonify({
+                "success": True,
+                "message": f"Archivo '{filename}' eliminado correctamente"
+            })
+        except Exception as e:
+            return jsonify({
+                "success": False,
+                "message": f"Error al eliminar: {str(e)}"
+            })
+    
+    @staticmethod
+    def download_with_auth():
+        """Validar contraseña antes de descargar archivo"""
+        # Obtener el nombre del archivo de la URL
+        filename = request.view_args.get('filename', '')
+        
+        # Validar contraseña
+        try:
+            data = request.get_json()
+            admin_password = data.get('admin_password') if data else None
+        except:
+            admin_password = None
+        
+        if not admin_password:
+            return jsonify({
+                "success": False,
+                "message": "Se requiere contraseña de administrador"
+            })
+        
+        if not BackupController._validate_admin_password(admin_password):
+            return jsonify({
+                "success": False,
+                "message": "Contraseña de administrador incorrecta"
+            })
+        
+        # Validar que el archivo existe
+        file_path = os.path.join('static', 'backup', filename)
+        if not os.path.exists(file_path):
+            return jsonify({
+                "success": False,
+                "message": "El archivo no existe"
+            })
+        
+        return jsonify({
+            "success": True,
+            "message": "Descarga autorizada"
+        })
 
     @staticmethod
     def restore():
         """Ejecutar restauración de base de datos"""
+        # Validar contraseña de administrador
+        admin_password = request.form.get('admin_password')
+        if not admin_password:
+            flash("❌ Se requiere contraseña de administrador para restaurar un respaldo", "error")
+            return redirect(url_for('routes.admin_backup_view'))
+        
+        if not BackupController._validate_admin_password(admin_password):
+            flash("❌ Contraseña de administrador incorrecta", "error")
+            return redirect(url_for('routes.admin_backup_view'))
+        
         server_file = request.form.get('server_file')
         file_to_restore = None
 
@@ -218,7 +340,7 @@ class BackupController:
                 file = request.files['backup_file']
                 if file.filename == '':
                     flash("❌ No se seleccionó ningún archivo.", "error")
-                    return redirect(url_for('routes.admin_backup_restore_view'))
+                    return redirect(url_for('routes.admin_backup_view'))
                 
                 # Leer archivo
                 if file.filename.endswith('.zip'):
@@ -246,7 +368,7 @@ class BackupController:
                     data = json.loads(file.read().decode('utf-8'))
             else:
                 flash("❌ No hay origen de datos para restaurar.", "error")
-                return redirect(url_for('routes.admin_backup_restore_view'))
+                return redirect(url_for('routes.admin_backup_view'))
 
             # Proceso de restauración en MongoDB
             restored_collections = 0
@@ -267,7 +389,7 @@ class BackupController:
             print(f"❌ Error en la restauración: {str(e)}")
             flash(f"❌ Error en la restauración: {str(e)}", "error")
             
-        return redirect(url_for('routes.admin_backup_restore_view'))
+        return redirect(url_for('routes.admin_backup_view'))
     
     @staticmethod
     def configure_auto_backup():
@@ -297,7 +419,7 @@ class BackupController:
             # Iniciar o detener el scheduler
             if enabled:
                 BackupController._schedule_auto_backups(frequency, hour)
-                message = "✅ Respaldos automáticos activados"
+                message = "✅ Respaldos automáticos activados correctamente"
             else:
                 BackupController._backup_running = False
                 message = "✅ Respaldos automáticos desactivados"
@@ -345,6 +467,7 @@ class BackupController:
         if BackupController._backup_thread is None or not BackupController._backup_thread.is_alive():
             BackupController._backup_thread = threading.Thread(target=run_scheduler, daemon=True)
             BackupController._backup_thread.start()
+            print("🤖 Thread de auto-backup iniciado")
     
     @staticmethod
     def _ejecutar_respaldo_automatico():
@@ -366,8 +489,12 @@ class BackupController:
             backup_data = {}
             for col_name in collections:
                 if col_name != 'configuracion':  # Excluir configuración
-                    data = list(db[col_name].find())
-                    backup_data[col_name] = json.loads(json_util.dumps(data))
+                    try:
+                        data = list(db[col_name].find())
+                        backup_data[col_name] = json.loads(json_util.dumps(data))
+                    except Exception as e:
+                        print(f"⚠️ Error al respaldar {col_name}: {e}")
+                        backup_data[col_name] = []
             
             with open(full_path, 'w', encoding='utf-8') as f:
                 json.dump(backup_data, f, ensure_ascii=False, indent=4)

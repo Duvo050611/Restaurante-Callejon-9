@@ -1,0 +1,131 @@
+{% extends "layout/layout_base.html" %}
+
+{% block title %}Empleados{% endblock %}
+{% block page_title %}Gestión de Empleados{% endblock %}
+{% block page_subtitle %}Administra el personal del restaurante{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-primary: #F2913D;
+        --color-primary-dark: #DE823D;
+        --color-secondary: #F2CA99;
+        --color-accent: #F2A399;
+        --color-dark: #0D0D0D;
+    }
+    
+    .btn-primary {
+        background-color: var(--color-primary);
+        color: white;
+    }
+    .btn-primary:hover {
+        background-color: var(--color-primary-dark);
+    }
+    
+    .text-primary {
+        color: var(--color-primary);
+    }
+    
+    .border-primary {
+        border-color: var(--color-primary);
+    }
+    
+    .bg-primary {
+        background-color: var(--color-primary);
+    }
+    
+    .role-admin { background-color: #8B5CF6; color: white; }
+    .role-mesero { background-color: #10B981; color: white; }
+    .role-cocina { background-color: #F97316; color: white; }
+    .role-inventario { background-color: #3B82F6; color: white; }
+    
+    .status-activo { background-color: #D1FAE5; color: #065F46; }
+    .status-inactivo { background-color: #FEE2E2; color: #991B1B; }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="mb-6 flex justify-between items-center">
+    <div>
+        <h2 class="text-2xl font-bold text-gray-800">Lista de Empleados</h2>
+        <p class="text-gray-600">Administra el personal del restaurante</p>
+    </div>
+    <a href="{{ url_for('routes.admin_empleados_crear') }}" 
+       class="btn-primary px-6 py-3 rounded-lg hover:opacity-90 transition font-medium flex items-center gap-2">
+        <i class="bi bi-person-plus-fill"></i>
+        Nuevo Empleado
+    </a>
+</div>
+
+<div class="card">
+    <div class="card-body p-0">
+        <div class="overflow-x-auto">
+            <table class="w-full">
+                <thead class="bg-gray-50 border-b-2 border-gray-200">
+                    <tr>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Empleado</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Email</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Rol</th>
+                        <th class="px-6 py-3 text-left text-xs font-bold text-gray-700 uppercase">Estado</th>
+                        <th class="px-6 py-3 text-center text-xs font-bold text-gray-700 uppercase">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for empleado in empleados %}
+                    <tr class="hover:bg-gray-50 transition">
+                        <td class="px-6 py-4">
+                            <div class="flex items-center gap-3">
+                                <div class="w-10 h-10 rounded-full flex items-center justify-center text-white font-bold"
+                                     style="background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark))">
+                                    {{ empleado.usuario_nombre[0]|upper }}
+                                </div>
+                                <div>
+                                    <p class="font-semibold text-gray-800">
+                                        {{ empleado.usuario_nombre }} {{ empleado.usuario_apellidos }}
+                                    </p>
+                                </div>
+                            </div>
+                        </td>
+                        <td class="px-6 py-4 text-sm text-gray-600">
+                            {{ empleado.usuario_email }}
+                        </td>
+                        <td class="px-6 py-4">
+                            <span class="px-3 py-1 rounded-full text-xs font-semibold
+                                {% if empleado.usuario_rol == '1' %}role-admin
+                                {% elif empleado.usuario_rol == '2' %}role-mesero
+                                {% elif empleado.usuario_rol == '3' %}role-cocina
+                                {% elif empleado.usuario_rol == '4' %}role-inventario
+                                {% else %}role-admin{% endif %}">
+                                {{ empleado.rol_nombre }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4">
+                            {% if empleado.usuario_status == 1 %}
+                            <span class="px-3 py-1 status-activo rounded-full text-xs font-semibold">
+                                Activo
+                            </span>
+                            {% else %}
+                            <span class="px-3 py-1 status-inactivo rounded-full text-xs font-semibold">
+                                Inactivo
+                            </span>
+                            {% endif %}
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <div class="flex justify-center gap-2">
+                                <a href="{{ url_for('routes.admin_empleados_editar', empleado_id=empleado._id) }}" 
+                                   class="p-2 rounded-lg transition hover:bg-opacity-20"
+                                   style="background-color: var(--color-secondary); color: var(--color-dark)"
+                                   title="Editar">
+                                    <i class="bi bi-pencil"></i>
+                                </a>
+                            </div>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

@@ -1,7 +1,6 @@
 """
 Dashboard Controller - Sistema Restaurante Callejón 9
-Versión simplificada sin bcrypt para desarrollo local
-Roles: 1=Admin, 2=Mesero, 3=Cocina
+CORRECCIÓN: Agregado soporte para rol de inventario (4) en validación
 """
 from flask import request, session, redirect, url_for, render_template, jsonify
 from controllers.inventario.inventarioController import InventarioController
@@ -28,16 +27,17 @@ class DashboardController:
         rol_endpoints = {
             "1": "dashboard_admin",
             "2": "dashboard_mesero",
-            "3": "dashboard_cocina"
+            "3": "dashboard_cocina",
+            "4": "dashboard_inventario"
         }
 
         endpoint = rol_endpoints.get(rol)
-        print(f"🔄 Redirigiendo al endpoint: {endpoint} (Rol: {rol})")
+        print(f"Redirigiendo al endpoint: {endpoint} (Rol: {rol})")
         
         if endpoint:
             return redirect(url_for(f"routes.{endpoint}"))
         else:
-            print(f"❌ Rol no reconocido: {rol}")
+            print(f" Rol no reconocido: {rol}")
             return "⚠ Rol no reconocido", 403
 
     # ==========================================
@@ -116,7 +116,7 @@ class DashboardController:
     
         return InventarioController.dashboard()
     # ==========================================
-    # GESTIÓN DE EMPLEADOS (SOLO ADMIN)
+    # GESTIÓN DE EMPLEADOS
     # ==========================================
 
     @staticmethod
@@ -125,10 +125,12 @@ class DashboardController:
         if "usuario_rol" not in session or str(session["usuario_rol"]) != "1":
             return redirect(url_for("routes.login"))
             
-        empleados = Usuario.find_activos()
+        # Obtener TODOS los empleados (no solo activos)
+        empleados = list(db.usuarios.find({"usuario_rol": {"$in": ["1", "2", "3", "4"]}}))
         
         for emp in empleados:
             emp["rol_nombre"] = RolPermisos.get_nombre_rol(emp.get("usuario_rol"))
+            emp["_id"] = str(emp["_id"])  # Convertir ObjectId a string
         
         return render_template("admin/empleados/lista.html", empleados=empleados)
 
@@ -156,13 +158,13 @@ class DashboardController:
                         "message": "Ya existe un empleado con este correo"
                     }), 400
                 
-                if data["rol"] not in ["1", "2", "3"]:
+                if data["rol"] not in ["1", "2", "3", "4"]:
                     return jsonify({
                         "success": False,
                         "message": "Rol no válido"
                     }), 400
                 
-                # Contraseña en texto plano
+                # Contraseña
                 nuevo_empleado = {
                     "usuario_nombre": data["nombre"],
                     "usuario_apellidos": data["apellidos"],
@@ -181,7 +183,6 @@ class DashboardController:
                     "updated_at": datetime.utcnow()
                 }
                 
-                # Campos específicos por rol
                 if data["rol"] == "2":  # Mesero
                     nuevo_empleado.update({
                         "mesero_numero": data.get("numero_empleado", ""),
@@ -205,6 +206,14 @@ class DashboardController:
                         "cocina_puede_ver_recetas_completas": data.get("puede_ver_recetas", False),
                         "cocina_certificaciones": data.get("certificaciones", [])
                     })
+                elif data["rol"] == "4":  # Inventario
+                    nuevo_empleado.update({
+                        "inventario_numero": data.get("numero_empleado", ""),
+                        "inventario_area": data.get("area", ""),
+                        "inventario_turno": data.get("turno", ""),
+                        "inventario_puede_gestionar_proveedores": data.get("puede_gestionar_proveedores", False),
+                        "inventario_puede_realizar_auditorias": data.get("puede_realizar_auditorias", False)
+                    })
                 
                 result = Usuario.create(nuevo_empleado)
                 
@@ -224,148 +233,210 @@ class DashboardController:
         return render_template("admin/empleados/crear.html")
 
     @staticmethod
+    def empleados_editar(empleado_id):
+        """Formulario de edición de empleado"""
+        if "usuario_rol" not in session or str(session["usuario_rol"]) != "1":
+            return redirect(url_for("routes.login"))
+
+        try:
+            from bson.objectid import ObjectId
+            
+            # Obtener el empleado
+            empleado = db.usuarios.find_one({
+                "_id": ObjectId(empleado_id),
+                "usuario_rol": {"$in": ["1", "2", "3", "4"]}
+            })
+
+            if not empleado:
+                return "Empleado no encontrado", 404
+
+            empleado["id"] = str(empleado["_id"])
+            empleado["rol_nombre"] = RolPermisos.get_nombre_rol(empleado.get("usuario_rol"))
+
+            if request.method == "POST":
+                data = request.get_json()
+
+                update_data = {}
+
+                if 'nombre' in data:
+                    update_data['usuario_nombre'] = data['nombre']
+                if 'apellidos' in data:
+                    update_data['usuario_apellidos'] = data['apellidos']
+                if 'email' in data:
+                    update_data['usuario_email'] = data['email'].lower()
+                if 'telefono' in data:
+                    update_data['usuario_telefono'] = data['telefono']
+                if 'rol' in data:
+                    if data['rol'] not in ["1", "2", "3", "4"]:
+                        return jsonify({
+                            "success": False,
+                            "message": "Rol no válido"
+                        }), 400
+                    update_data['usuario_rol'] = data['rol']
+                if 'status' in data:
+                    update_data['usuario_status'] = int(data['status'])
+
+                # Si se proporciona una nueva contraseña
+                if 'password' in data and data['password']:
+                    from services.security.password_service import PasswordService
+                    update_data['usuario_clave'] = PasswordService.hash_password(data['password'])
+
+                update_data['updated_at'] = datetime.utcnow()
+
+                db.usuarios.update_one(
+                    {"_id": ObjectId(empleado_id)},
+                    {"$set": update_data}
+                )
+
+                return jsonify({
+                    "success": True,
+                    "message": "Empleado actualizado correctamente"
+                })
+
+            return render_template("admin/empleados/editar.html", empleado=empleado)
+
+        except Exception as e:
+            print(f"Error al editar empleado: {e}")
+            return jsonify({
+                "success": False,
+                "message": "Error al editar empleado"
+            }), 500
+
+    @staticmethod
     def reportes():
         """Vista de reportes para administración"""
         if "usuario_rol" not in session or str(session["usuario_rol"]) != "1":
             return redirect(url_for("routes.login"))
         return render_template("support/reportes/index.html")
 
-@staticmethod
-def toggle_theme():
-    """Cambia el tema visual (light/dark)"""
-    try:
-        current_theme = session.get('theme', 'light')
-        session['theme'] = 'dark' if current_theme == 'light' else 'light'
-    except Exception as e:
-        print(f"Error al cambiar tema: {e}")
-    
-    return redirect(request.referrer or url_for('routes.login'))
-"""
-API Controller para Dashboard de Administración
-Proporciona endpoints para obtener datos en tiempo real
-"""
-from flask import jsonify, session
-from config.db import db
-from datetime import datetime, timedelta
-from bson import ObjectId
-
-class DashboardAPIController:
-    
     @staticmethod
-    def get_stats():
-        """Obtiene estadísticas generales del dashboard"""
+    def toggle_theme():
+        """Cambia el tema visual (light/dark)"""
         try:
-            if "usuario_rol" not in session or str(session["usuario_rol"]) != "1":
-                return jsonify({"error": "No autorizado"}), 403
+            current_theme = session.get('theme', 'light')
+            session['theme'] = 'dark' if current_theme == 'light' else 'light'
+        except Exception as e:
+            print(f"Error al cambiar tema: {e}")
+        
+        return redirect(request.referrer or url_for('routes.login'))
+
+    @staticmethod
+    def get_dashboard_stats():
+        """Obtiene estadísticas reales del sistema para el dashboard"""
+        from flask import jsonify
+        from config.db import db
+        from datetime import datetime, timedelta
+        
+        try:
+            # Total de empleados
+            total_empleados = db.usuarios.count_documents({
+                "usuario_rol": {"$in": ["1", "2", "3", "4"]}
+            })
             
-            hoy_inicio = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
-            
-            total_empleados = db.usuarios.count_documents({"usuario_rol": {"$in": ["1", "2", "3", "4"]}})
+            # Personal activo (status = 1)
             empleados_activos = db.usuarios.count_documents({
                 "usuario_rol": {"$in": ["1", "2", "3", "4"]},
                 "usuario_status": 1
             })
             
-            total_mesas = db.mesas.count_documents({"activa": True})
-            mesas_ocupadas = db.mesas.count_documents({"estado": "ocupada", "activa": True})
+            # Por rol específico
+            admin_count = db.usuarios.count_documents({"usuario_rol": "1"})
+            meseros_count = db.usuarios.count_documents({"usuario_rol": "2"})
+            cocina_count = db.usuarios.count_documents({"usuario_rol": "3"})
+            inventario_count = db.usuarios.count_documents({"usuario_rol": "4"})
             
-            comandas_activas = db.comandas.count_documents({
-                "estado": {"$in": ["nueva", "en_cocina", "preparando"]}
+            # Mesas ocupadas
+            mesas_ocupadas = 0
+            try:
+                if "mesas" in db.list_collection_names():
+                    mesas_ocupadas = db.mesas.count_documents({"estado": "ocupada"})
+            except:
+                pass
+            
+            # Comandas activas
+            comandas_activas = 0
+            try:
+                if "comandas" in db.list_collection_names():
+                    comandas_activas = db.comandas.count_documents({
+                        "estado": {"$in": ["nueva", "enviada", "preparacion"]}
+                    })
+            except:
+                pass
+            
+            # Pedidos en cocina
+            en_cocina = 0
+            try:
+                if "comandas" in db.list_collection_names():
+                    en_cocina = db.comandas.count_documents({
+                        "estado": {"$in": ["enviada", "preparacion"]}
+                    })
+            except:
+                pass
+            
+            # Ventas del día
+            hoy_inicio = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            ventas_dia = 0
+            
+            try:
+                if "ventas" in db.list_collection_names():
+                    pipeline = [
+                        {"$match": {
+                            "fecha": {"$gte": hoy_inicio},
+                            "estado": {"$ne": "cancelada"}
+                        }},
+                        {"$group": {
+                            "_id": None,
+                            "total": {"$sum": "$total"}
+                        }}
+                    ]
+                    resultado = list(db.ventas.aggregate(pipeline))
+                    if resultado:
+                        ventas_dia = resultado[0].get("total", 0)
+            except:
+                pass
+            
+            # Cuentas abiertas
+            cuentas_abiertas = 0
+            try:
+                if "cuentas" in db.list_collection_names():
+                    cuentas_abiertas = db.cuentas.count_documents({
+                        "estado": {"$in": ["abierta", "activa"]}
+                    })
+            except:
+                pass
+            
+            # Platillos disponibles
+            platillos_disponibles = 0
+            try:
+                if "menu" in db.list_collection_names():
+                    platillos_disponibles = db.menu.count_documents({
+                        "disponible": True
+                    })
+            except:
+                pass
+            
+            return jsonify({
+                "success": True,
+                "data": {
+                    "total_empleados": total_empleados,
+                    "empleados_activos": empleados_activos,
+                    "admin_count": admin_count,
+                    "meseros_count": meseros_count,
+                    "cocina_count": cocina_count,
+                    "inventario_count": inventario_count,
+                    "mesas_ocupadas": mesas_ocupadas,
+                    "comandas_activas": comandas_activas,
+                    "en_cocina": en_cocina,
+                    "ventas_dia": float(ventas_dia),
+                    "cuentas_abiertas": cuentas_abiertas,
+                    "platillos_disponibles": platillos_disponibles,
+                    "timestamp": datetime.now().isoformat()
+                }
             })
             
-            comandas_listas = db.comandas.count_documents({"estado": "lista"})
-            
-            ventas_hoy = list(db.ventas.aggregate([
-                {
-                    "$match": {
-                        "fecha": {"$gte": hoy_inicio}
-                    }
-                },
-                {
-                    "$group": {
-                        "_id": None,
-                        "total": {"$sum": "$total"},
-                        "cantidad": {"$sum": 1}
-                    }
-                }
-            ]))
-            
-            ventas_dia = float(ventas_hoy[0]["total"]) if ventas_hoy else 0
-            num_ventas = ventas_hoy[0]["cantidad"] if ventas_hoy else 0
-            
-            total_platillos = db.platillos.count_documents({"disponible": True})
-            
-            stats = {
-                "total_empleados": total_empleados,
-                "empleados_activos": empleados_activos,
-                "total_admin": db.usuarios.count_documents({"usuario_rol": "1"}),
-                "total_meseros": db.usuarios.count_documents({"usuario_rol": "2"}),
-                "total_cocina": db.usuarios.count_documents({"usuario_rol": "3"}),
-                "total_inventario": db.usuarios.count_documents({"usuario_rol": "4"}),
-                "mesas_ocupadas": mesas_ocupadas,
-                "mesas_disponibles": total_mesas - mesas_ocupadas,
-                "comandas_activas": comandas_activas,
-                "comandas_listas": comandas_listas,
-                "ventas_dia": ventas_dia,
-                "num_ventas": num_ventas,
-                "total_platillos": total_platillos,
-                "en_cocina": db.comandas.count_documents({"estado": "en_cocina"})
-            }
-            
-            return jsonify(stats)
-            
         except Exception as e:
-            print(f"Error en get_stats: {e}")
-            import traceback
-            traceback.print_exc()
-            return jsonify({"error": str(e)}), 500
-    
-    @staticmethod
-    def get_actividad_reciente():
-        """Obtiene las últimas actividades del sistema"""
-        try:
-            if "usuario_rol" not in session or str(session["usuario_rol"]) != "1":
-                return jsonify({"error": "No autorizado"}), 403
-            
-            actividades = list(db.actividad_reciente.find().sort("timestamp", -1).limit(10))
-            
-            for act in actividades:
-                act["_id"] = str(act["_id"])
-                if "usuario_id" in act:
-                    act["usuario_id"] = str(act["usuario_id"])
-                if "timestamp" in act and isinstance(act["timestamp"], datetime):
-                    act["timestamp"] = act["timestamp"].isoformat()
-            
-            return jsonify(actividades)
-            
-        except Exception as e:
-            print(f"Error en get_actividad_reciente: {e}")
-            return jsonify({"error": str(e)}), 500
-    
-    @staticmethod
-    def get_personal_activo():
-        """Obtiene lista de personal actualmente conectado"""
-        try:
-            if "usuario_rol" not in session or str(session["usuario_rol"]) != "1":
-                return jsonify({"error": "No autorizado"}), 403
-            
-            personal = list(db.usuarios.find({
-                "usuario_rol": {"$in": ["1", "2", "3", "4"]},
-                "usuario_status": 1
-            }).sort("usuario_nombre", 1))
-            
-            resultado = []
-            for p in personal:
-                resultado.append({
-                    "nombre": f"{p.get('usuario_nombre', '')} {p.get('usuario_apellidos', '')}".strip(),
-                    "rol": p.get("usuario_rol", ""),
-                    "email": p.get("usuario_email", ""),
-                    "status": "online",
-                    "ultimaActividad": "Hace 1 min"
-                })
-            
-            return jsonify(resultado)
-            
-        except Exception as e:
-            print(f"Error en get_personal_activo: {e}")
-            return jsonify({"error": str(e)}), 500
+            print(f"Error: {e}")
+            return jsonify({
+                "success": False,
+                "error": str(e)
+            }), 500

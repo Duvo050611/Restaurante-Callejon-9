@@ -1,0 +1,347 @@
+{% extends "layout/layout_base.html" %}
+
+{% block title %}Ventas - Restaurante Callejón 9{% endblock %}
+{% block page_title %}Gestión de Ventas{% endblock %}
+{% block page_subtitle %}Administra las ventas y transacciones del restaurante{% endblock %}
+
+{% block extra_css %}
+<style>
+    :root {
+        --color-primary: #F2913D;
+        --color-primary-dark: #DE823D;
+        --color-secondary: #F2CA99;
+        --color-accent: #F2A399;
+        --color-dark: #0D0D0D;
+    }
+    
+    /* Botones */
+    .btn-primary {
+        background-color: var(--color-primary) !important;
+        color: white !important;
+        border: none;
+    }
+    .btn-primary:hover {
+        background-color: var(--color-primary-dark) !important;
+    }
+    
+    .btn-secondary {
+        background-color: var(--color-secondary) !important;
+        color: var(--color-dark) !important;
+    }
+    .btn-secondary:hover {
+        background-color: var(--color-accent) !important;
+    }
+    
+    /* Header */
+    .page-header {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark)) !important;
+        color: white;
+    }
+    
+    /* Tarjetas KPI */
+    .kpi-card {
+        border: 1px solid #e5e7eb;
+        border-radius: 0.75rem;
+        transition: all 0.3s ease;
+    }
+    .kpi-card:hover {
+        border-color: var(--color-primary);
+        transform: translateY(-2px);
+        box-shadow: 0 10px 25px -5px rgba(242, 145, 61, 0.3);
+    }
+    .kpi-card .kpi-icon {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+        color: white;
+    }
+    .kpi-card .kpi-value {
+        color: var(--color-primary);
+    }
+    
+    /* Tarjetas de acción */
+    .action-card {
+        border: 2px solid transparent;
+        transition: all 0.3s ease;
+    }
+    .action-card:hover {
+        border-color: var(--color-primary);
+        transform: translateY(-4px);
+        box-shadow: 0 10px 25px -5px rgba(242, 145, 61, 0.3);
+    }
+    .action-card .action-icon {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+        color: white;
+    }
+    
+    /* Tablas */
+    .data-table th {
+        background: linear-gradient(135deg, var(--color-primary), var(--color-primary-dark));
+        color: white;
+    }
+    .data-table tr:hover {
+        background-color: #fef3c7;
+    }
+    
+    /* Badges de estado */
+    .badge-pending { background-color: #FEF3C7; color: #92400E; }
+    .badge-completed { background-color: #D1FAE5; color: #065F46; }
+    .badge-cancelled { background-color: #FEE2E2; color: #991B1B; }
+    
+    /* Filtros */
+    .filter-section {
+        border: 1px solid #e5e7eb;
+    }
+    .filter-group input:focus, .filter-group select:focus {
+        border-color: var(--color-primary) !important;
+        outline: none;
+        box-shadow: 0 0 0 3px rgba(242, 145, 61, 0.2);
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="max-w-7xl mx-auto">
+    <!-- Header -->
+    <div class="page-header rounded-xl p-6 mb-6">
+        <h1 class="text-2xl font-bold flex items-center gap-3">
+            <i class="bi bi-cash-stack"></i>
+            Gestión de Ventas
+        </h1>
+        <p class="mt-1 opacity-90">Administra las transacciones y ventas del restaurante</p>
+    </div>
+    
+    <!-- KPI Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+        <!-- Ventas del día -->
+        <div class="kpi-card bg-white p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Ventas de Hoy</p>
+                    <p class="kpi-value text-3xl font-bold">$12,450</p>
+                </div>
+                <div class="kpi-icon w-14 h-14 rounded-xl flex items-center justify-center">
+                    <i class="bi bi-currency-dollar text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-3 flex items-center text-sm">
+                <span class="text-green-600 flex items-center gap-1">
+                    <i class="bi bi-arrow-up"></i> 12%
+                </span>
+                <span class="text-gray-400 ml-2">vs ayer</span>
+            </div>
+        </div>
+        
+        <!-- Transacciones -->
+        <div class="kpi-card bg-white p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Transacciones</p>
+                    <p class="kpi-value text-3xl font-bold">48</p>
+                </div>
+                <div class="kpi-icon w-14 h-14 rounded-xl flex items-center justify-center">
+                    <i class="bi bi-receipt text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-3 flex items-center text-sm">
+                <span class="text-green-600 flex items-center gap-1">
+                    <i class="bi bi-arrow-up"></i> 8%
+                </span>
+                <span class="text-gray-400 ml-2">vs ayer</span>
+            </div>
+        </div>
+        
+        <!-- Ticket promedio -->
+        <div class="kpi-card bg-white p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Ticket Promedio</p>
+                    <p class="kpi-value text-3xl font-bold">$259</p>
+                </div>
+                <div class="kpi-icon w-14 h-14 rounded-xl flex items-center justify-center">
+                    <i class="bi bi-graph-up text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-3 flex items-center text-sm">
+                <span class="text-green-600 flex items-center gap-1">
+                    <i class="bi bi-arrow-up"></i> 5%
+                </span>
+                <span class="text-gray-400 ml-2">vs ayer</span>
+            </div>
+        </div>
+        
+        <!-- Cuentas pendientes -->
+        <div class="kpi-card bg-white p-5">
+            <div class="flex items-center justify-between">
+                <div>
+                    <p class="text-sm text-gray-500">Cuentas Abiertas</p>
+                    <p class="kpi-value text-3xl font-bold">6</p>
+                </div>
+                <div class="kpi-icon w-14 h-14 rounded-xl flex items-center justify-center">
+                    <i class="bi bi-clock-history text-2xl"></i>
+                </div>
+            </div>
+            <div class="mt-3">
+                <a href="{{ url_for('routes.ventas_cuentas') }}" class="text-sm text-primary hover:underline">
+                    Ver todas →
+                </a>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Acciones principales -->
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+        <a href="{{ url_for('routes.ventas_cuentas') }}" class="action-card bg-white p-6 rounded-xl text-center">
+            <div class="action-icon w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="bi bi-list-ul text-3xl"></i>
+            </div>
+            <h3 class="font-bold text-lg text-gray-800">Ver Cuentas</h3>
+            <p class="text-sm text-gray-500 mt-1">Ver estado de cuentas</p>
+        </a>
+        
+        <a href="{{ url_for('routes.ventas_corte') }}" class="action-card bg-white p-6 rounded-xl text-center">
+            <div class="action-icon w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="bi bi-file-earmark-text text-3xl"></i>
+            </div>
+            <h3 class="font-bold text-lg text-gray-800">Corte del Día</h3>
+            <p class="text-sm text-gray-500 mt-1">Reporte diario</p>
+        </a>
+        
+        <a href="{{ url_for('reports.index') }}" class="action-card bg-white p-6 rounded-xl text-center">
+            <div class="action-icon w-16 h-16 rounded-full flex items-center justify-center mx-auto mb-4">
+                <i class="bi bi-graph-up text-3xl"></i>
+            </div>
+            <h3 class="font-bold text-lg text-gray-800">Reportes</h3>
+            <p class="text-sm text-gray-500 mt-1">Ver reportes completos</p>
+        </a>
+    </div>
+    
+    <!-- Transactions Table -->
+    <div class="bg-white rounded-xl border border-gray-200 overflow-hidden">
+        <div class="p-4 border-b border-gray-200 flex justify-between items-center">
+            <h2 class="font-bold text-lg text-gray-800">
+                <i class="bi bi-clock-history text-primary"></i>
+                Transacciones Recientes
+            </h2>
+            <div class="flex gap-2">
+                <button class="btn-primary px-4 py-2 rounded-lg text-sm">
+                    <i class="bi bi-download"></i> Exportar
+                </button>
+            </div>
+        </div>
+        
+        <!-- Filtros -->
+        <div class="p-4 bg-gray-50 border-b border-gray-200 filter-section">
+            <form class="flex flex-wrap gap-4 items-end">
+                <div class="filter-group">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha inicio</label>
+                    <input type="date" class="px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div class="filter-group">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Fecha fin</label>
+                    <input type="date" class="px-3 py-2 border border-gray-300 rounded-lg">
+                </div>
+                <div class="filter-group">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">Estado</label>
+                    <select class="px-3 py-2 border border-gray-300 rounded-lg">
+                        <option value="">Todos</option>
+                        <option value="completada">Completada</option>
+                        <option value="pendiente">Pendiente</option>
+                        <option value="cancelada">Cancelada</option>
+                    </select>
+                </div>
+                <button type="button" class="btn-primary px-4 py-2 rounded-lg">
+                    <i class="bi bi-search"></i> Buscar
+                </button>
+            </form>
+        </div>
+        
+        <!-- Tabla -->
+        <div class="overflow-x-auto">
+            <table class="data-table w-full">
+                <thead>
+                    <tr>
+                        <th class="px-6 py-3 text-left">ID</th>
+                        <th class="px-6 py-3 text-left">Fecha/Hora</th>
+                        <th class="px-6 py-3 text-left">Mesa</th>
+                        <th class="px-6 py-3 text-left">Mesero</th>
+                        <th class="px-6 py-3 text-right">Total</th>
+                        <th class="px-6 py-3 text-center">Estado</th>
+                        <th class="px-6 py-3 text-center">Acciones</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 text-sm font-medium">#V001</td>
+                        <td class="px-6 py-4 text-sm">23/02/2026 14:30</td>
+                        <td class="px-6 py-4 text-sm">Mesa 5</td>
+                        <td class="px-6 py-4 text-sm">Juan Pérez</td>
+                        <td class="px-6 py-4 text-sm text-right font-bold">$450.00</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="badge-completed px-3 py-1 rounded-full text-xs font-medium">Completada</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button class="text-primary hover:text-primary-dark mx-1">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="text-green-600 hover:text-green-700 mx-1">
+                                <i class="bi bi-printer"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 text-sm font-medium">#V002</td>
+                        <td class="px-6 py-4 text-sm">23/02/2026 14:45</td>
+                        <td class="px-6 py-4 text-sm">Mesa 8</td>
+                        <td class="px-6 py-4 text-sm">Maria García</td>
+                        <td class="px-6 py-4 text-sm text-right font-bold">$780.50</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="badge-pending px-3 py-1 rounded-full text-xs font-medium">Pendiente</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button class="text-primary hover:text-primary-dark mx-1">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="text-green-600 hover:text-green-700 mx-1">
+                                <i class="bi bi-printer"></i>
+                            </button>
+                        </td>
+                    </tr>
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 text-sm font-medium">#V003</td>
+                        <td class="px-6 py-4 text-sm">23/02/2026 15:00</td>
+                        <td class="px-6 py-4 text-sm">Mesa 2</td>
+                        <td class="px-6 py-4 text-sm">Juan Pérez</td>
+                        <td class="px-6 py-4 text-sm text-right font-bold">$320.00</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="badge-completed px-3 py-1 rounded-full text-xs font-medium">Completada</span>
+                        </td>
+                        <td class="px-6 py-4 text-center">
+                            <button class="text-primary hover:text-primary-dark mx-1">
+                                <i class="bi bi-eye"></i>
+                            </button>
+                            <button class="text-green-600 hover:text-green-700 mx-1">
+                                <i class="bi bi-printer"></i>
+                            </button>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+        
+        <!-- Paginación -->
+        <div class="p-4 border-t border-gray-200 flex justify-between items-center">
+            <p class="text-sm text-gray-500">Mostrando 1-3 de 48 transacciones</p>
+            <div class="flex gap-2">
+                <button class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-100">
+                    <i class="bi bi-chevron-left"></i>
+                </button>
+                <button class="px-3 py-1 bg-primary text-white rounded-lg text-sm">1</button>
+                <button class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-100">2</button>
+                <button class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-100">3</button>
+                <button class="px-3 py-1 border border-gray-300 rounded-lg text-sm hover:bg-gray-100">
+                    <i class="bi bi-chevron-right"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

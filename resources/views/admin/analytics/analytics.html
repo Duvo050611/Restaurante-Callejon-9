@@ -1,0 +1,607 @@
+{% extends "layout/layout_base.html" %}
+
+{% block title %}Analytics - MapReduce{% endblock %}
+
+{% block extra_css %}
+<style>
+    .kpi-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+        border-left: 4px solid;
+        transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .kpi-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .kpi-card.blue   { border-color: #F2913D; }
+    .kpi-card.green  { border-color: #22c55e; }
+    .kpi-card.purple { border-color: #F2A399; }
+    .kpi-card.orange { border-color: #DE823D; }
+    .kpi-card.teal   { border-color: #F2CA99; }
+    .kpi-card.rose   { border-color: #F2A399; }
+
+    .chart-card {
+        background: white;
+        border-radius: 12px;
+        padding: 1.5rem;
+        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+    }
+    .chart-card h3 {
+        font-size: 1rem;
+        font-weight: 600;
+        color: #1e293b;
+        margin-bottom: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    .badge-mr {
+        font-size: 0.65rem;
+        background: #f1f5f9;
+        color: #64748b;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-weight: 500;
+    }
+
+    .table-analytics {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 0.875rem;
+    }
+    .table-analytics th {
+        background: #f8fafc;
+        color: #64748b;
+        font-weight: 600;
+        text-align: left;
+        padding: 0.75rem 1rem;
+        border-bottom: 2px solid #e2e8f0;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+    }
+    .table-analytics td {
+        padding: 0.75rem 1rem;
+        border-bottom: 1px solid #f1f5f9;
+        color: #334155;
+    }
+    .table-analytics tr:hover td {
+        background: #f8fafc;
+    }
+
+    .rank-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 28px;
+        height: 28px;
+        border-radius: 50%;
+        font-weight: 700;
+        font-size: 0.75rem;
+    }
+    .rank-1 { background: #fef08a; color: #854d0e; }
+    .rank-2 { background: #e2e8f0; color: #475569; }
+    .rank-3 { background: #fed7aa; color: #9a3412; }
+    .rank-n { background: #f1f5f9; color: #64748b; }
+
+    .loading-spinner {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 120px;
+        color: #94a3b8;
+        font-size: 0.875rem;
+        gap: 0.5rem;
+    }
+    .loading-spinner i { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+
+    .method-pill {
+        padding: 2px 10px;
+        border-radius: 999px;
+        font-size: 0.75rem;
+        font-weight: 600;
+    }
+    .method-efectivo    { background: #dcfce7; color: #166534; }
+    .method-tarjeta     { background: #dbeafe; color: #1e40af; }
+    .method-transferencia { background: #fef9c3; color: #854d0e; }
+    .method-mixto       { background: #fce7f3; color: #9d174d; }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="flex-1 overflow-auto p-6">
+
+    <!-- HEADER -->
+    <div class="mb-6 flex items-center justify-between">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900 flex items-center gap-2">
+                <i class="bi bi-bar-chart-line-fill" style="color: #F2913D;"></i>
+                Analytics · MapReduce
+            </h1>
+            <p class="text-sm text-gray-500 mt-1">
+                Consultas agregadas en tiempo real desde MongoDB · Últimos 30 días
+            </p>
+        </div>
+        <button onclick="cargarTodo()" class="flex items-center gap-2 bg-[#F2913D] hover:bg-[#DE823D] text-white text-sm font-semibold px-4 py-2 rounded-lg transition">
+            <i class="bi bi-arrow-clockwise"></i> Actualizar
+        </button>
+    </div>
+
+    <!-- KPIs -->
+    <div class="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-6" id="kpi-grid">
+        <div class="col-span-2 md:col-span-3 lg:col-span-6 loading-spinner" id="kpi-loading">
+            <i class="bi bi-arrow-repeat text-xl"></i> Cargando KPIs...
+        </div>
+    </div>
+
+    <!-- ROW 1: Ventas por día + Métodos de pago -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+
+        <!-- Ventas diarias -->
+        <div class="chart-card lg:col-span-2">
+            <h3>
+                <i class="bi bi-calendar3" style="color: #F2913D;"></i>
+                Ventas Diarias
+                <span class="badge-mr">MapReduce · $group + $dateToString</span>
+            </h3>
+            <div id="chart-dias-loading" class="loading-spinner">
+                <i class="bi bi-arrow-repeat text-xl"></i> Cargando...
+            </div>
+            <canvas id="chart-dias" style="display:none; max-height:260px;"></canvas>
+        </div>
+
+        <!-- Métodos de pago (dona) -->
+        <div class="chart-card">
+            <h3>
+                <i class="bi bi-credit-card" style="color: #F2A399;"></i>
+                Métodos de Pago
+                <span class="badge-mr">MapReduce</span>
+            </h3>
+            <div id="chart-metodos-loading" class="loading-spinner">
+                <i class="bi bi-arrow-repeat text-xl"></i> Cargando...
+            </div>
+            <canvas id="chart-metodos" style="display:none; max-height:260px;"></canvas>
+        </div>
+    </div>
+
+    <!-- ROW 2: Top platillos + Horas pico -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 mb-4">
+
+        <!-- Top platillos (tabla) -->
+        <div class="chart-card lg:col-span-2">
+            <h3>
+                <i class="bi bi-trophy" style="color: #DE823D;"></i>
+                Top 10 Platillos por Ingreso
+                <span class="badge-mr">MapReduce · $unwind + $group</span>
+            </h3>
+            <div id="table-platillos-loading" class="loading-spinner">
+                <i class="bi bi-arrow-repeat text-xl"></i> Cargando...
+            </div>
+            <div id="table-platillos" style="display:none; overflow-x:auto;"></div>
+        </div>
+
+        <!-- Horas pico (barras) -->
+        <div class="chart-card">
+            <h3>
+                <i class="bi bi-clock" style="color: #F2CA99;"></i>
+                Horas Pico
+                <span class="badge-mr">MapReduce · $hour</span>
+            </h3>
+            <div id="chart-horas-loading" class="loading-spinner">
+                <i class="bi bi-arrow-repeat text-xl"></i> Cargando...
+            </div>
+            <canvas id="chart-horas" style="display:none; max-height:300px;"></canvas>
+        </div>
+    </div>
+
+    <!-- ROW 3: Rendimiento meseros + Categorías -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4 mb-4">
+
+        <!-- Rendimiento por mesero -->
+        <div class="chart-card">
+            <h3>
+                <i class="bi bi-people" style="color: #22c55e;"></i>
+                Rendimiento por Mesero
+                <span class="badge-mr">MapReduce · $group by mesero</span>
+            </h3>
+            <div id="table-meseros-loading" class="loading-spinner">
+                <i class="bi bi-arrow-repeat text-xl"></i> Cargando...
+            </div>
+            <div id="table-meseros" style="display:none; overflow-x:auto;"></div>
+        </div>
+
+        <!-- Ventas por Mesa -->
+        <div class="chart-card">
+            <h3>
+                <i class="bi bi-table" style="color: #F2A399;"></i>
+                Top 15 Mesas por Consumo
+                <span class="badge-mr">MapReduce · $group by mesa</span>
+            </h3>
+            <div id="table-mesas-loading" class="loading-spinner">
+                <i class="bi bi-arrow-repeat text-xl"></i> Cargando...
+            </div>
+            <div id="table-mesas" style="display:none; overflow-x:auto; max-height:280px; overflow-y:auto;"></div>
+        </div>
+    </div>
+
+    <!-- FOOTER NOTE -->
+    <div class="mt-6 p-4 rounded-lg text-sm flex items-start gap-3" style="background: rgba(242,145,61,0.1); border: 1px solid #F2913D; color: #525252;">
+        <i class="bi bi-info-circle-fill mt-0.5 flex-shrink-0" style="color: #F2913D;"></i>
+        <div>
+            <strong>Motor de Analytics:</strong> Todas las consultas utilizan <strong>MongoDB Aggregation Pipeline</strong>
+            con operaciones <code>$group</code>, <code>$unwind</code>, <code>$sum</code>, <code>$avg</code> y <code>$sort</code>
+            — el equivalente nativo de <strong>MapReduce</strong> en MongoDB.
+            Para análisis distribuidos a gran escala, el módulo <code>analytics/</code> usa PySpark.
+        </div>
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// ==========================================
+// INSTANCIAS DE CHARTS
+// ==========================================
+let chartDias, chartMetodos, chartHoras;
+
+// ==========================================
+// UTILIDADES
+// ==========================================
+function fmt(val) {
+    return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(val || 0);
+}
+function fmtNum(val) {
+    return new Intl.NumberFormat('es-MX').format(val || 0);
+}
+function showEl(id) { document.getElementById(id).style.display = ''; }
+function hideEl(id) { document.getElementById(id).style.display = 'none'; }
+
+function rankBadge(i) {
+    const cls = i === 0 ? 'rank-1' : i === 1 ? 'rank-2' : i === 2 ? 'rank-3' : 'rank-n';
+    return `<span class="rank-badge ${cls}">${i+1}</span>`;
+}
+
+function metodoPill(m) {
+    const map = {
+        'efectivo': 'method-efectivo',
+        'tarjeta': 'method-tarjeta',
+        'transferencia': 'method-transferencia',
+        'mixto': 'method-mixto'
+    };
+    const cls = map[m] || 'method-mixto';
+    return `<span class="method-pill ${cls}">${m || '-'}</span>`;
+}
+
+// ==========================================
+// KPIs GENERALES
+// ==========================================
+async function cargarKPIs() {
+    try {
+        const r = await fetch('/api/analytics/kpis');
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+
+        const grid = document.getElementById('kpi-grid');
+        grid.innerHTML = `
+        <div class="kpi-card blue">
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Ventas Hoy</p>
+            <p class="text-2xl font-bold text-gray-900">${fmt(d.ventas_hoy)}</p>
+            <p class="text-xs text-gray-400 mt-1">${fmtNum(d.transacciones_hoy)} transacciones</p>
+        </div>
+        <div class="kpi-card green">
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Ventas Semana</p>
+            <p class="text-2xl font-bold text-gray-900">${fmt(d.ventas_semana)}</p>
+            <p class="text-xs text-gray-400 mt-1">Últimos 7 días</p>
+        </div>
+        <div class="kpi-card purple">
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Ventas Mes</p>
+            <p class="text-2xl font-bold text-gray-900">${fmt(d.ventas_mes)}</p>
+            <p class="text-xs text-gray-400 mt-1">${fmtNum(d.transacciones_mes)} transacciones</p>
+        </div>
+        <div class="kpi-card orange">
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Ticket Promedio</p>
+            <p class="text-2xl font-bold text-gray-900">${fmt(d.ticket_promedio)}</p>
+            <p class="text-xs text-gray-400 mt-1">Últimos 30 días</p>
+        </div>
+        <div class="kpi-card teal">
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Mesas Ocupadas</p>
+            <p class="text-2xl font-bold text-gray-900">${d.mesas_ocupadas} / ${d.total_mesas}</p>
+            <p class="text-xs text-gray-400 mt-1">${d.ocupacion_pct}% ocupación</p>
+        </div>
+        <div class="kpi-card rose">
+            <p class="text-xs text-gray-500 font-semibold uppercase tracking-wide mb-1">Ocupación</p>
+            <div class="w-full bg-gray-200 rounded-full h-2 mt-2">
+                <div class="bg-rose-500 h-2 rounded-full" style="width:${Math.min(d.ocupacion_pct, 100)}%"></div>
+            </div>
+            <p class="text-xs text-gray-400 mt-1">${d.ocupacion_pct}%</p>
+        </div>`;
+    } catch(e) {
+        document.getElementById('kpi-grid').innerHTML = `<div class="col-span-6 text-sm text-red-500 p-4"><i class="bi bi-exclamation-circle"></i> Error: ${e.message}</div>`;
+    }
+}
+
+// ==========================================
+// VENTAS POR DÍA
+// ==========================================
+async function cargarVentasDia() {
+    try {
+        const r = await fetch('/api/analytics/ventas-por-dia');
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+
+        hideEl('chart-dias-loading');
+        showEl('chart-dias');
+
+        const labels = d.data.map(x => x.fecha);
+        const totales = d.data.map(x => x.total);
+
+        if (chartDias) chartDias.destroy();
+        chartDias = new Chart(document.getElementById('chart-dias'), {
+            type: 'line',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Ventas ($)',
+                    data: totales,
+                    borderColor: '#F2913D',
+                    backgroundColor: 'rgba(242,145,61,0.1)',
+                    fill: true,
+                    tension: 0.4,
+                    pointRadius: 3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    y: { ticks: { callback: v => '$' + v.toLocaleString('es-MX') } }
+                }
+            }
+        });
+    } catch(e) {
+        document.getElementById('chart-dias-loading').innerHTML = `<span class="text-red-500 text-sm"><i class="bi bi-exclamation-circle"></i> ${e.message}</span>`;
+    }
+}
+
+// ==========================================
+// MÉTODOS DE PAGO
+// ==========================================
+async function cargarMetodosPago() {
+    try {
+        const r = await fetch('/api/analytics/metodos-pago');
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+
+        if (!d.data || d.data.length === 0) {
+            document.getElementById('chart-metodos-loading').innerHTML = '<span class="text-gray-400 text-sm">Sin datos en el período.</span>';
+            return;
+        }
+
+        hideEl('chart-metodos-loading');
+        showEl('chart-metodos');
+
+        // Colores Callejon 9: primary #F2913D, accent #F2A399, secondary #F2CA99
+        const colors = ['#F2913D','#F2A399','#F2CA99','#DE823D','#a855f7'];
+        if (chartMetodos) chartMetodos.destroy();
+        chartMetodos = new Chart(document.getElementById('chart-metodos'), {
+            type: 'doughnut',
+            data: {
+                labels: d.data.map(x => x.metodo || 'Sin método'),
+                datasets: [{
+                    data: d.data.map(x => x.total),
+                    backgroundColor: colors,
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: {
+                    legend: { position: 'bottom', labels: { boxWidth: 12 } },
+                    tooltip: { callbacks: { label: ctx => ` ${fmt(ctx.raw)}` } }
+                }
+            }
+        });
+    } catch(e) {
+        document.getElementById('chart-metodos-loading').innerHTML = `<span class="text-red-500 text-sm"><i class="bi bi-exclamation-circle"></i> ${e.message}</span>`;
+    }
+}
+
+// ==========================================
+// TOP PLATILLOS
+// ==========================================
+async function cargarTopPlatillos() {
+    try {
+        const r = await fetch('/api/analytics/top-platillos');
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+
+        hideEl('table-platillos-loading');
+        showEl('table-platillos');
+
+        if (!d.data || d.data.length === 0) {
+            document.getElementById('table-platillos').innerHTML = '<p class="text-sm text-gray-400 p-4">Sin datos en el período.</p>';
+            return;
+        }
+
+        const rows = d.data.map((row, i) => `
+        <tr>
+            <td>${rankBadge(i)}</td>
+            <td class="font-medium">${row.platillo || '-'}</td>
+            <td class="text-right font-semibold text-green-700">${fmt(row.total_ingreso)}</td>
+            <td class="text-right">${fmtNum(row.total_cantidad)}</td>
+            <td class="text-right text-gray-500">${fmtNum(row.num_ventas)}</td>
+        </tr>`).join('');
+
+        document.getElementById('table-platillos').innerHTML = `
+        <table class="table-analytics">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Platillo</th>
+                    <th class="text-right">Ingreso Total</th>
+                    <th class="text-right">Unidades</th>
+                    <th class="text-right">En ventas</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    } catch(e) {
+        document.getElementById('table-platillos-loading').innerHTML = `<span class="text-red-500 text-sm"><i class="bi bi-exclamation-circle"></i> ${e.message}</span>`;
+    }
+}
+
+// ==========================================
+// HORAS PICO
+// ==========================================
+async function cargarHorasPico() {
+    try {
+        const r = await fetch('/api/analytics/horas-pico');
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+
+        if (!d.data || d.data.length === 0) {
+            document.getElementById('chart-horas-loading').innerHTML = '<span class="text-gray-400 text-sm">Sin datos.</span>';
+            return;
+        }
+
+        hideEl('chart-horas-loading');
+        showEl('chart-horas');
+
+        const labels = d.data.map(x => `${String(x.hora).padStart(2,'0')}:00`);
+        const counts = d.data.map(x => x.count);
+
+        if (chartHoras) chartHoras.destroy();
+        chartHoras = new Chart(document.getElementById('chart-horas'), {
+            type: 'bar',
+            data: {
+                labels,
+                datasets: [{
+                    label: 'Ventas',
+                    data: counts,
+                    backgroundColor: 'rgba(242,145,61,0.7)',
+                    borderRadius: 6
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: { x: { ticks: { font: { size: 10 } } } }
+            }
+        });
+    } catch(e) {
+        document.getElementById('chart-horas-loading').innerHTML = `<span class="text-red-500 text-sm"><i class="bi bi-exclamation-circle"></i> ${e.message}</span>`;
+    }
+}
+
+// ==========================================
+// RENDIMIENTO MESEROS
+// ==========================================
+async function cargarMeseros() {
+    try {
+        const r = await fetch('/api/analytics/rendimiento-meseros');
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+
+        hideEl('table-meseros-loading');
+        showEl('table-meseros');
+
+        if (!d.data || d.data.length === 0) {
+            document.getElementById('table-meseros').innerHTML = '<p class="text-sm text-gray-400 p-4">Sin datos en el período.</p>';
+            return;
+        }
+
+        const rows = d.data.map((row, i) => `
+        <tr>
+            <td>${rankBadge(i)}</td>
+            <td class="font-medium">${row.mesero || '-'}</td>
+            <td class="text-right font-semibold text-green-700">${fmt(row.total_ventas)}</td>
+            <td class="text-right">${fmtNum(row.num_ventas)}</td>
+            <td class="text-right">${fmt(row.ticket_promedio)}</td>
+            <td class="text-right text-blue-600">${fmt(row.propinas)}</td>
+        </tr>`).join('');
+
+        document.getElementById('table-meseros').innerHTML = `
+        <table class="table-analytics">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Mesero</th>
+                    <th class="text-right">Ventas</th>
+                    <th class="text-right">Transac.</th>
+                    <th class="text-right">Ticket Prom.</th>
+                    <th class="text-right">Propinas</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    } catch(e) {
+        document.getElementById('table-meseros-loading').innerHTML = `<span class="text-red-500 text-sm"><i class="bi bi-exclamation-circle"></i> ${e.message}</span>`;
+    }
+}
+
+// ==========================================
+// VENTAS POR MESA
+// ==========================================
+async function cargarMesas() {
+    try {
+        const r = await fetch('/api/analytics/ventas-por-mesa');
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+
+        hideEl('table-mesas-loading');
+        showEl('table-mesas');
+
+        if (!d.data || d.data.length === 0) {
+            document.getElementById('table-mesas').innerHTML = '<p class="text-sm text-gray-400 p-4">Sin datos en el período.</p>';
+            return;
+        }
+
+        const rows = d.data.map((row, i) => `
+        <tr>
+            <td>${rankBadge(i)}</td>
+            <td class="font-medium text-center">Mesa ${row.mesa}</td>
+            <td class="text-right font-semibold text-green-700">${fmt(row.total_ventas)}</td>
+            <td class="text-right">${fmtNum(row.num_visitas)}</td>
+            <td class="text-right">${fmt(row.ticket_promedio)}</td>
+            <td class="text-right text-gray-500">${fmtNum(row.comensales_total)}</td>
+        </tr>`).join('');
+
+        document.getElementById('table-mesas').innerHTML = `
+        <table class="table-analytics">
+            <thead>
+                <tr>
+                    <th>#</th>
+                    <th>Mesa</th>
+                    <th class="text-right">Consumo Total</th>
+                    <th class="text-right">Visitas</th>
+                    <th class="text-right">Ticket Prom.</th>
+                    <th class="text-right">Comensales</th>
+                </tr>
+            </thead>
+            <tbody>${rows}</tbody>
+        </table>`;
+    } catch(e) {
+        document.getElementById('table-mesas-loading').innerHTML = `<span class="text-red-500 text-sm"><i class="bi bi-exclamation-circle"></i> ${e.message}</span>`;
+    }
+}
+
+// ==========================================
+// CARGA INICIAL
+// ==========================================
+function cargarTodo() {
+    cargarKPIs();
+    cargarVentasDia();
+    cargarMetodosPago();
+    cargarTopPlatillos();
+    cargarHorasPico();
+    cargarMeseros();
+    cargarMesas();
+}
+
+document.addEventListener('DOMContentLoaded', cargarTodo);
+</script>
+{% endblock %}
