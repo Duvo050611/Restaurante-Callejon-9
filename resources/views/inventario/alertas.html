@@ -15,9 +15,23 @@
     <span>Insumos</span>
 </a>
 
+<a href="{{ url_for('routes.inventario_historial') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-arrow-left-right text-lg"></i>
+    <span>Movimientos</span>
+</a>
+
 <a href="{{ url_for('routes.inventario_alertas') }}" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-lg">
     <i class="bi bi-exclamation-triangle"></i>
     <span>Alertas</span>
+</a>
+
+  <a href="{{ url_for('routes.inventario_proveedores') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-truck text-lg"></i>
+    <span>Proveedores</span>
+</a>
+<a href="{{ url_for('routes.inventario_reportes') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-graph-up text-lg"></i>
+    <span>Reportes</span>
 </a>
 {% endblock %}
 
