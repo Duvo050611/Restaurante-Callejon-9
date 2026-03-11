@@ -19,10 +19,7 @@ from routes import routes_bp
 # ================================
 os.environ["PYSPARK_PYTHON"] = sys.executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
-# Inicialización de Flask
-# En app.py
-app = Flask(__name__,template_folder="resources/views",static_folder="static")
-# Configuración de CORS
+
 # ================================
 # FLASK
 # ================================
@@ -43,7 +40,6 @@ lista_origenes = [
     "http://127.0.0.1:5000"
 ]
 
-
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": lista_origenes}})
 
 # ================================
@@ -52,19 +48,22 @@ CORS(app, supports_credentials=True, resources={r"/*": {"origins": lista_origene
 socketio = SocketIO(
     app,
     cors_allowed_origins=lista_origenes,
-        async_mode="threading",
+    async_mode="threading",
     manage_session=False
 )
 
-# Registrar Blueprint de rutas
+# Registrar Blueprint de rutas (SOLO UNA VEZ)
 app.register_blueprint(routes_bp)
 
 # Registrar rutas de reportes
 from routes import register_reports_routes
 register_reports_routes(app)
 
-# 🔑 CLAVE SECRETA (Usa una variable de entorno en producción)
-app.secret_key = os.getenv("SECRET_KEY", "22d6225b061b6b75979d7b4fd5bfb6993b32a66346c0d188fd6f3a37ac36698e")
+# 🔑 CLAVE SECRETA
+app.secret_key = os.getenv(
+    "SECRET_KEY",
+    "22d6225b061b6b75979d7b4fd5bfb6993b32a66346c0d188fd6f3a37ac36698e"
+)
 
 session_dir = os.path.join(os.getcwd(), "flask_session")
 os.makedirs(session_dir, exist_ok=True)
@@ -73,7 +72,7 @@ app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_FILE_DIR"] = session_dir
 app.config["SESSION_PERMANENT"] = True
 app.config["SESSION_USE_SIGNER"] = True
-app.config["SESSION_COOKIE_SECURE"] = False  # True en producción
+app.config["SESSION_COOKIE_SECURE"] = False
 app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
 app.config["SESSION_COOKIE_NAME"] = "callejon9_session"
 
@@ -124,11 +123,6 @@ def not_found(e):
 @app.errorhandler(403)
 def forbidden(e):
     return redirect(url_for("routes.login"))
-
-# ================================
-# BLUEPRINT
-# ================================
-app.register_blueprint(routes_bp)
 
 # ================================
 # RUN
