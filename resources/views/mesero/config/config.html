@@ -1,4 +1,4 @@
-{% extends "layout/layout_base.html" %}
+{% extends "layout/layout_mesero.html" %}
 
 {% block title %}Configuración{% endblock %}
 
@@ -10,8 +10,30 @@
 </style>
 {% endblock %}
 
-{% block page_title %}Configuración de Cuenta{% endblock %}
+{% block page_title %}Configuración de Cuenta - Mesero{% endblock %}
 {% block page_subtitle %}Gestiona tu perfil y seguridad{% endblock %}
+
+{% block navigation %}
+<a href="{{ url_for('routes.dashboard_mesero') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-house-door text-lg"></i>
+    <span>Inicio</span>
+</a>
+
+<a href="{{ url_for('routes.mesero_comandas') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-clipboard-data text-lg"></i>
+    <span>Comandas</span>
+</a>
+
+<a href="{{ url_for('routes.mesero_menu') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-menu-button-wide text-lg"></i>
+    <span>Menú</span>
+</a>
+
+<a href="{{ url_for('routes.settings') }}" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-lg transition">
+    <i class="bi bi-gear text-lg"></i>
+    <span>Configuración</span>
+</a>
+{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto">

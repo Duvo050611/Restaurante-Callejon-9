@@ -184,7 +184,7 @@
             <div id="table-platillos" style="display:none; overflow-x:auto;"></div>
         </div>
 
-        <!-- Horas pico (barras) -->
+        <!-- Horas pico -->
         <div class="chart-card">
             <h3>
                 <i class="bi bi-clock" style="color: #F2CA99;"></i>
@@ -385,7 +385,6 @@ async function cargarMetodosPago() {
         hideEl('chart-metodos-loading');
         showEl('chart-metodos');
 
-        // Colores Callejon 9: primary #F2913D, accent #F2A399, secondary #F2CA99
         const colors = ['#F2913D','#F2A399','#F2CA99','#DE823D','#a855f7'];
         if (chartMetodos) chartMetodos.destroy();
         chartMetodos = new Chart(document.getElementById('chart-metodos'), {
