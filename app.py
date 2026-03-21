@@ -29,7 +29,16 @@ lista_origenes = [
     "http://localhost:5000",
 ]
 
-CORS(app, resources={r"/*": {"origins": lista_origenes}}, supports_credentials=True)
+# Configuración de CORS
+# Aplicar CORS solo a rutas específicas que lo necesitan, no a todo
+CORS(app, 
+     resources={
+         r"/api/*": {"origins": lista_origenes, "supports_credentials": True},
+         r"/login": {"origins": lista_origenes, "supports_credentials": True},
+         r"/verify-2fa": {"origins": lista_origenes, "supports_credentials": True}
+     },
+     supports_credentials=True,
+     allow_headers=["Content-Type"])
 
 # Logging de peticiones
 @app.before_request
@@ -79,7 +88,7 @@ app.config["SESSION_FILE_DIR"] = session_dir
 app.config["SESSION_PERMANENT"] = False  # Cambiado a False para que las sesiones expiren
 app.config["SESSION_USE_SIGNER"] = True
 app.config["SESSION_COOKIE_SECURE"] = False  # True en producción
-app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_SAMESITE"] = None  # Permite cookies en todos los contextos
 app.config["SESSION_COOKIE_NAME"] = "callejon9_session"
 app.config["SESSION_REFRESH_EACH_REQUEST"] = True
 
