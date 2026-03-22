@@ -62,38 +62,6 @@
 </style>
 {% endblock %}
 
-{% block navigation %}
-<a href="{{ url_for('routes.dashboard_admin') }}" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-lg transition">
-    <i class="bi bi-speedometer2 text-lg"></i>
-    <span>Centro de Control</span>
-</a>
-
-<a href="{{ url_for('routes.admin_empleados_lista') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
-    <i class="bi bi-people text-lg"></i>
-    <span>Empleados</span>
-</a>
-
-<a href="#" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
-    <i class="bi bi-journal-text text-lg"></i>
-    <span>Menú</span>
-</a>
-
-<a href="#" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
-    <i class="bi bi-box-seam text-lg"></i>
-    <span>Inventario</span>
-</a>
-
-<a href="#" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
-    <i class="bi bi-cash-stack text-lg"></i>
-    <span>Ventas</span>
-</a>
-
-<a href="{{ url_for('routes.admin_reportes') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
-    <i class="bi bi-graph-up text-lg"></i>
-    <span>Reportes</span>
-</a>
-{% endblock %}
-
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-6">
 
@@ -441,7 +409,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
             // Logs del sistema
             agregarLog('Sistema iniciado correctamente', 'INFO');
-            agregarLog(`${data.empleados_activos} empleados conectados`, 'INFO');
+            if (personalActivoData.length > 0) {
+                agregarLog(`${personalActivoData.length} empleados conectados en tiempo real`, 'INFO');
+            }
 
             // Mostrar dashboard
             skeletonContainer.classList.add('hidden');
@@ -669,13 +639,12 @@ document.addEventListener('DOMContentLoaded', function() {
     cargarDashboard();
 
     // ============================== 
-    // 11. AUTO-REFRESH (30 segundos)
+    // 11. AUTO-REFRESH (10 segundos para tiempo real)
     // ==============================
     setInterval(() => {
         cargarPersonalActivo();
         cargarActividadReciente();
-        agregarLog('Datos actualizados automáticamente', 'INFO');
-    }, 30000);
+    }, 10000);
 });
 
 // ============================== 
@@ -786,6 +755,9 @@ async function generarContenidoEmpleados(filtro) {
                         <button onclick="verDetalleEmpleado('${emp.id}')" class="p-2 text-blue-600 hover:bg-blue-50 rounded-lg transition" title="Ver detalle">
                             <i class="bi bi-eye"></i>
                         </button>
+                        <a href="/admin/empleados/editar/${emp.id}" class="p-2 text-green-600 hover:bg-green-50 rounded-lg transition" title="Editar">
+                            <i class="bi bi-pencil"></i>
+                        </a>
                         <button onclick="eliminarEmpleado('${emp.id}', '${emp.nombre}')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition" title="Eliminar">
                             <i class="bi bi-trash"></i>
                         </button>
@@ -829,14 +801,19 @@ async function generarContenidoPersonalActivo() {
                                 <p class="font-semibold text-gray-900">${persona.nombre}</p>
                                 <p class="text-sm text-gray-600">${rol.nombre} • ${persona.email}</p>
                                 <p class="text-xs text-gray-500 mt-1">
-                                    <i class="bi bi-clock"></i> ${persona.ultimaActividad}
+                                    <i class="bi bi-clock"></i> Conectado: ${persona.tiempo_conectado || '0s'}
                                 </p>
                             </div>
                         </div>
-                        <span class="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
-                            <span class="h-2 w-2 rounded-full bg-green-600 animate-pulse"></span>
-                            Online
-                        </span>
+                        <div class="flex items-center gap-2">
+                            <span class="flex items-center gap-2 px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm">
+                                <span class="h-2 w-2 rounded-full bg-green-600 animate-pulse"></span>
+                                Online
+                            </span>
+                            <button onclick="desconectarUsuario('${persona.email}')" class="p-2 text-red-600 hover:bg-red-50 rounded-lg transition" title="Desconectar usuario">
+                                <i class="bi bi-x-circle"></i>
+                            </button>
+                        </div>
                     </div>
                 `;
             }).join('')}
@@ -908,6 +885,58 @@ async function eliminarEmpleado(id, nombre) {
             window.location.reload();
         } else {
             Swal.fire('Error', data.error || 'No se pudo eliminar', 'error');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        Swal.fire('Error', 'Error de conexión', 'error');
+    }
+}
+
+// ==============================
+// DESCONECTAR USUARIO
+// ==============================
+
+async function desconectarUsuario(email) {
+    // Buscar el usuario en los datos locales
+    const usuario = personalActivoData.find(p => p.email === email);
+    
+    if (!usuario) {
+        Swal.fire('Error', 'Usuario no encontrado', 'error');
+        return;
+    }
+    
+    // Buscar el ID del empleado en empleadosData
+    const empleado = empleadosData.find(e => e.email === email);
+    
+    if (!empleado || !empleado.id) {
+        Swal.fire('Error', 'No se pudo obtener el ID del empleado', 'error');
+        return;
+    }
+    
+    const result = await Swal.fire({
+        title: '¿Desconectar usuario?',
+        text: `Se desconectará a: ${email}`,
+        icon: 'warning',
+        showCancelButton: true,
+        confirmButtonColor: '#dc2626',
+        confirmButtonText: 'Sí, desconectar',
+        cancelButtonText: 'Cancelar'
+    });
+
+    if (!result.isConfirmed) return;
+
+    try {
+        const response = await fetch(`/api/empleados/${empleado.id}/desconectar`, {
+            method: 'POST'
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            Swal.fire('Desconectado', 'Usuario desconectado correctamente', 'success');
+            cargarPersonalActivo(); // Recargar la lista
+        } else {
+            Swal.fire('Error', data.error || 'No se pudo desconectar', 'error');
         }
     } catch (error) {
         console.error('Error:', error);

@@ -20,18 +20,12 @@ from routes import routes_bp
 os.environ["PYSPARK_PYTHON"] = sys.executable
 os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
 
-# ================================
-# FLASK
-# ================================
-app = Flask(
-    __name__,
-    template_folder="resources/views",
-    static_folder="static"
-)
 
-# ================================
-# CORS
-# ================================
+app = Flask(__name__, template_folder="resources/views", static_folder="static")
+
+app.config['TEMPLATES_AUTO_RELOAD'] = True
+app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
+# Configuración de CORS
 lista_origenes = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
@@ -39,7 +33,6 @@ lista_origenes = [
     "http://localhost:5000",
     "http://127.0.0.1:5000"
 ]
-
 
 CORS(app, supports_credentials=True, resources={r"/*": {"origins": lista_origenes}})
 
@@ -49,28 +42,59 @@ CORS(app, supports_credentials=True, resources={r"/*": {"origins": lista_origene
 socketio = SocketIO(
     app,
     cors_allowed_origins=lista_origenes,
-        async_mode="threading",
+    async_mode="threading",
     manage_session=False
 )
 
-# ================================
-# CONFIG SESIÓN
-# ================================
-app.secret_key = os.getenv("SECRET_KEY", "dev-secret")
+# Registrar Blueprint de rutas (SOLO UNA VEZ)
+app.register_blueprint(routes_bp)
+
+# Registrar rutas de reportes
+from routes import register_reports_routes
+register_reports_routes(app)
+
+# CLAVE SECRETA
+app.secret_key = os.getenv("SECRET_KEY", "22d6225b061b6b75979d7b4fd5bfb6993b32a66346c0d188fd6f3a37ac36698e")
 
 session_dir = os.path.join(os.getcwd(), "flask_session")
 os.makedirs(session_dir, exist_ok=True)
 
-app.config.update(
-    SESSION_TYPE="filesystem",
-    SESSION_FILE_DIR=session_dir,
-    SESSION_PERMANENT=True,
-    SESSION_USE_SIGNER=True,
-    SESSION_COOKIE_SECURE=False,
-    SESSION_COOKIE_SAMESITE="Lax",
-    SESSION_COOKIE_NAME="callejon9_session"
-)
+# Limpiar sesiones antiguas al iniciar (más de 24 horas)
+import time
+try:
+    for archivo in os.listdir(session_dir):
+        filepath = os.path.join(session_dir, archivo)
+        if os.path.isfile(filepath):
+            # Eliminar archivos de sesión mayores a 24 horas
+            if os.path.getmtime(filepath) < time.time() - 86400:
+                os.remove(filepath)
+                print(f"🗑️  Sesión antigua eliminada: {archivo}")
+except Exception as e:
+    print(f"⚠️  Error limpiando sesiones: {e}")
 
+# Limpiar sesiones antiguas al iniciar
+import time
+try:
+    for archivo in os.listdir(session_dir):
+        filepath = os.path.join(session_dir, archivo)
+        if os.path.isfile(filepath):
+            # Eliminar archivos de sesión mayores a 24 horas
+            if os.path.getmtime(filepath) < time.time() - 86400:
+                os.remove(filepath)
+                print(f"🗑️  Sesión antigua eliminada: {archivo}")
+except Exception as e:
+    print(f"⚠️  Error limpiando sesiones: {e}")
+
+app.config["SESSION_TYPE"] = "filesystem"
+app.config["SESSION_FILE_DIR"] = session_dir
+app.config["SESSION_PERMANENT"] = False  
+app.config["SESSION_USE_SIGNER"] = True
+app.config["SESSION_COOKIE_SECURE"] = False  # True en producción con HTTPS
+app.config["SESSION_COOKIE_SAMESITE"] = "Lax"
+app.config["SESSION_COOKIE_NAME"] = "callejon9_session"
+app.config["SESSION_REFRESH_EACH_REQUEST"] = True
+
+# Inicializar extensión de sesiones
 Session(app)
 
 # ================================
@@ -119,27 +143,30 @@ def forbidden(e):
     return redirect(url_for("routes.login"))
 
 # ================================
-# BLUEPRINT
-# ================================
-app.register_blueprint(routes_bp)
-
-# ================================
 # RUN
 # ================================
 if __name__ == "__main__":
     import socket
     hostname = socket.gethostname()
     local_ip = socket.gethostbyname(hostname)
-
+    
+    import platform
+    is_windows = platform.system() == "Windows"
+    
     print("=" * 60)
     print("🍽️ CALLEJÓN 9 - SOCKET.IO ACTIVO")
     print(f"📍 http://127.0.0.1:5000")
     print(f"📍 http://{local_ip}:5000")
     print("=" * 60)
-
-    socketio.run(
-        app,
-        host="0.0.0.0",
+    reloader_config = not is_windows  
+    
+    print(f" Auto-reload: {'Activado' if reloader_config else 'Desactivado (Windows)'}")
+    print("=" * 60 + "\n")
+    
+    app.run(
+        debug=True,
+        use_reloader=reloader_config,
+        host='0.0.0.0',
         port=5000,
-        debug=True
+        threaded=True  
     )
