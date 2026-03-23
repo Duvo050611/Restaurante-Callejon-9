@@ -498,6 +498,11 @@ def api_cerrar_cuenta(cuenta_id):
 def api_comandas_cerradas():
     return ComandaController.comandas_cerradas()
 
+@routes_bp.route("/api/mesero/propinas/rango", methods=["GET"])
+@login_required
+@rol_required(['2'])
+def api_propinas_rango():
+    return PropinasController.propinas_rango()
 
 # ============================================
 # PANEL DE COCINA (Rol 3)

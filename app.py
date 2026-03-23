@@ -22,7 +22,20 @@ os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
 
 
 app = Flask(__name__, template_folder="resources/views", static_folder="static")
+from bson import ObjectId
+from flask.json.provider import DefaultJSONProvider
+from datetime import datetime
 
+class MongoJSONProvider(DefaultJSONProvider):
+    def default(self, obj):
+        if isinstance(obj, ObjectId):
+            return str(obj)
+        if isinstance(obj, datetime):
+            return obj.isoformat()
+        return super().default(obj)
+
+app.json_provider_class = MongoJSONProvider
+app.json = MongoJSONProvider(app)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 # Configuración de CORS

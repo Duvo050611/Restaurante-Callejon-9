@@ -10,7 +10,6 @@ load_dotenv()
 
 # Inicializa SDK
 sdk = mercadopago.SDK(os.getenv("MP_ACCESS_TOKEN"))
-NGROK_URL = os.getenv("NGROK_URL", "http://localhost:5000")
 
 class MercadoPagoController:
 
