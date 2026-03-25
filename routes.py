@@ -508,7 +508,7 @@ def api_comandas_cerradas():
 @routes_bp.route("/dashboard/cocina")
 @login_required
 @rol_required(['3'])
-def dasgitboard_cocina():
+def dashboard_cocina():
     """Dashboard principal de cocina"""
     return DashboardController.cocina()
 
