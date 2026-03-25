@@ -2,12 +2,9 @@
 Controlador de Ventas - Gestión de ventas, cuentas y corte de caja
 """
 from flask import render_template, session, redirect, url_for, request, jsonify
-from models.venta_model import Venta, Cuenta, CorteCaja
-from models.mesa_model import Mesa
-from models.menu_model import Platillo
-from bson.objectid import ObjectId
+from models.sql.venta import Venta, Cuenta, CorteCaja
+from models.sql.menu import Platillo
 from datetime import datetime, timedelta
-import json
 
 class VentasController:
     # ============================================
@@ -39,15 +36,11 @@ class VentasController:
         """Formulario para nueva venta"""
         if "usuario_id" not in session:
             return redirect(url_for("routes.login"))
-        
-        # Obtener mesas disponibles
-        mesas = Mesa.find_all()
-        
-        # Obtener menú disponible
+
         menu = Platillo.find_disponibles()
-        
+
         return render_template("admin/ventas/nueva_venta.html",
-                             mesas=mesas,
+                             mesas=[],
                              menu=menu)
     
     @staticmethod

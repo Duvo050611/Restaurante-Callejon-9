@@ -1,4 +1,4 @@
-from models.Pedido import db
+from config.database import db
 
 class DetallePedido(db.Model):
     __tablename__ = 'detalles_pedido'

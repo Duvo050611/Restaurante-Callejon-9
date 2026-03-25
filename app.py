@@ -13,6 +13,7 @@ import os
 import sys
 
 from routes import routes_bp
+from config.database import init_db
 
 # ================================
 # CONFIG PYSPARK (si lo usas)
@@ -22,6 +23,11 @@ os.environ["PYSPARK_DRIVER_PYTHON"] = sys.executable
 
 
 app = Flask(__name__, template_folder="resources/views", static_folder="static")
+
+# ================================
+# POSTGRESQL (SQLAlchemy)
+# ================================
+init_db(app)
 
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
@@ -68,9 +74,9 @@ try:
             # Eliminar archivos de sesión mayores a 24 horas
             if os.path.getmtime(filepath) < time.time() - 86400:
                 os.remove(filepath)
-                print(f"🗑️  Sesión antigua eliminada: {archivo}")
+                print(f"[Session] Sesion antigua eliminada: {archivo}")
 except Exception as e:
-    print(f"⚠️  Error limpiando sesiones: {e}")
+    print(f"[Session] Error limpiando sesiones: {e}")
 
 # Limpiar sesiones antiguas al iniciar
 import time
@@ -81,9 +87,9 @@ try:
             # Eliminar archivos de sesión mayores a 24 horas
             if os.path.getmtime(filepath) < time.time() - 86400:
                 os.remove(filepath)
-                print(f"🗑️  Sesión antigua eliminada: {archivo}")
+                print(f"[Session] Sesion antigua eliminada: {archivo}")
 except Exception as e:
-    print(f"⚠️  Error limpiando sesiones: {e}")
+    print(f"[Session] Error limpiando sesiones: {e}")
 
 app.config["SESSION_TYPE"] = "filesystem"
 app.config["SESSION_FILE_DIR"] = session_dir
@@ -111,25 +117,25 @@ def inject_now():
 def log_request():
     if request.path.startswith("/static"):
         return
-    print(f"\n📡 {request.method} {request.path}")
-    print("🍪 Cookies:", request.cookies.keys())
+    print(f"\n[REQ] {request.method} {request.path}")
+    print("[REQ] Cookies:", list(request.cookies.keys()))
 
 # ================================
 # SOCKET EVENTS
 # ================================
 @socketio.on("connect")
 def socket_connect(auth):
-    print("🔌 Socket conectado")
+    print("[Socket] Conectado")
     print("Auth:", auth)
 
 @socketio.on("disconnect")
 def socket_disconnect():
-    print("❌ Socket desconectado")
+    print("[Socket] Desconectado")
 
 @socketio.on("join_room")
 def on_join_room(room):
     join_room(room)
-    print(f"📥 Cliente unido a sala: {room}")
+    print(f"[Socket] Cliente unido a sala: {room}")
 
 # ================================
 # ERRORES
@@ -154,9 +160,9 @@ if __name__ == "__main__":
     is_windows = platform.system() == "Windows"
     
     print("=" * 60)
-    print("🍽️ CALLEJÓN 9 - SOCKET.IO ACTIVO")
-    print(f"📍 http://127.0.0.1:5000")
-    print(f"📍 http://{local_ip}:5000")
+    print("CALLEJON 9 - SOCKET.IO ACTIVO")
+    print(f"  http://127.0.0.1:5000")
+    print(f"  http://{local_ip}:5000")
     print("=" * 60)
     reloader_config = not is_windows  
     

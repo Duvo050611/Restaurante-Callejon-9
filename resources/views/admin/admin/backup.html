@@ -806,22 +806,22 @@
                     <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.75rem;">
                         <label class="form-label" style="margin: 0;">
                             <i class="ri-database-line"></i>
-                            Colecciones
+                            Tablas PostgreSQL
                         </label>
                         <button type="button" onclick="toggleAll()" style="background: none; border: none; color: var(--color-primary); font-weight: 700; font-size: 0.8125rem; cursor: pointer; text-transform: uppercase; letter-spacing: 0.5px;">
                             <span id="toggleText">Todas</span>
                         </button>
                     </div>
                     <div class="checkbox-list">
-                        {% for col in collections %}
+                        {% for table in pg_tables %}
                         <div class="checkbox-item">
-                            <input type="checkbox" 
-                                   name="collections" 
-                                   value="{{ col }}" 
-                                   id="col_{{ loop.index }}"
-                                   class="collection-check" 
+                            <input type="checkbox"
+                                   name="pg_tables"
+                                   value="{{ table }}"
+                                   id="tbl_{{ loop.index }}"
+                                   class="collection-check"
                                    checked>
-                            <label for="col_{{ loop.index }}">{{ col|capitalize }}</label>
+                            <label for="tbl_{{ loop.index }}">{{ table }}</label>
                         </div>
                         {% endfor %}
                     </div>
@@ -1151,6 +1151,24 @@ function toggleAll() {
     
     document.getElementById('toggleText').textContent = allChecked ? 'Todas' : 'Ninguna';
 }
+
+// Mostrar mensajes flash de Flask con SweetAlert
+{% with messages = get_flashed_messages(with_categories=true) %}
+{% if messages %}
+window.addEventListener('DOMContentLoaded', function() {
+    {% for category, message in messages %}
+    Swal.fire({
+        icon: '{{ "success" if category == "success" else "error" if category == "error" else "warning" }}',
+        title: '{{ "Éxito" if category == "success" else "Error" if category == "error" else "Aviso" }}',
+        text: {{ message | tojson }},
+        confirmButtonColor: '#F2913D',
+        timer: {% if category == "success" %}4000{% else %}0{% endif %},
+        timerProgressBar: {% if category == "success" %}true{% else %}false{% endif %}
+    });
+    {% endfor %}
+});
+{% endif %}
+{% endwith %}
 
 // Generar respaldo
 document.getElementById('backupForm').addEventListener('submit', function(e) {

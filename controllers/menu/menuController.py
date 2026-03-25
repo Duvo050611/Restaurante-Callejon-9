@@ -3,8 +3,7 @@ Controlador de Menú
 Administra platillos, categorías y recetas del menú
 """
 from flask import render_template, session, redirect, url_for, request, jsonify
-from models.menu_model import Platillo, Categoria, Receta
-from bson.objectid import ObjectId
+from models.sql.menu import Platillo, Categoria
 import json
 
 class MenuController:
@@ -104,11 +103,11 @@ class MenuController:
                 data['alergenos'] = json.loads(data['alergenos'])
             
             platillo_id = Platillo.create(data)
-            
+
             return jsonify({
                 "success": True,
                 "message": "Platillo creado correctamente",
-                "platillo_id": platillo_id
+                "platillo_id": platillo_id,
             })
         except Exception as e:
             return jsonify({
@@ -285,12 +284,12 @@ class MenuController:
         
         try:
             data = request.get_json()
-            categoria_id = Categoria.create(data)
-            
+            categoria = Categoria.create(data)
+
             return jsonify({
                 "success": True,
                 "message": "Categoría creada correctamente",
-                "categoria_id": categoria_id
+                "categoria_id": str(categoria.id),
             })
         except Exception as e:
             return jsonify({
@@ -306,18 +305,12 @@ class MenuController:
         
         try:
             data = request.get_json()
-            success = Categoria.update(categoria_id, data)
-            
-            if success:
-                return jsonify({
-                    "success": True,
-                    "message": "Categoría actualizada correctamente"
-                })
+            actualizada = Categoria.update(categoria_id, data)
+
+            if actualizada:
+                return jsonify({"success": True, "message": "Categoría actualizada correctamente"})
             else:
-                return jsonify({
-                    "success": False,
-                    "message": "No se pudo actualizar la categoría"
-                }), 400
+                return jsonify({"success": False, "message": "No se pudo actualizar la categoría"}), 400
         except Exception as e:
             return jsonify({
                 "success": False,
@@ -356,12 +349,9 @@ class MenuController:
             return jsonify({"success": False, "message": "No autorizado"}), 401
         
         try:
-            categorias = Categoria.find_all()
-            
-            return jsonify({
-                "success": True,
-                "categorias": categorias
-            })
+            categorias = [c.to_dict() for c in Categoria.find_all()]
+
+            return jsonify({"success": True, "categorias": categorias})
         except Exception as e:
             return jsonify({
                 "success": False,

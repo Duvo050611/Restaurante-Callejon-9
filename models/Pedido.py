@@ -1,7 +1,5 @@
 from datetime import datetime
-from flask_sqlalchemy import SQLAlchemy
-
-db = SQLAlchemy()
+from config.database import db
 
 class Pedido(db.Model):
     __tablename__ = 'pedidos'

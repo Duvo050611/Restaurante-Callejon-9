@@ -1,30 +1,15 @@
 """
-Analytics Controller - Sistema de Restaurante Callejón 9
-Implementa consultas MapReduce sobre MongoDB para obtener métricas clave.
-
-Estructura de documentos en colección 'ventas':
-{
-  "_id": ObjectId,
-  "numero_venta": int,
-  "mesa_numero": int,
-  "mesero_id": ObjectId,
-  "mesero_nombre": str,
-  "comensales": int,
-  "platillos": [
-    { "nombre": str, "cantidad": int, "precio_unitario": float, "subtotal": float }
-  ],
-  "subtotal": float,
-  "propina": float,
-  "total": float,
-  "metodo_pago": str,
-  "fecha": datetime,
-  "created_at": datetime
-}
+Analytics Controller — PostgreSQL (SQLAlchemy) + MongoDB (mesas)
+Métricas de negocio sobre la tabla 'ventas' de PostgreSQL.
 """
 from flask import jsonify, render_template, session
-from config.db import db
+from config.db import db as mongo_db
+from models.sql.venta import Venta
+from config.database import db
+from sqlalchemy import func, cast, Date, extract
 from datetime import datetime, timedelta
 from controllers.auth.AuthController import login_required, rol_required
+from collections import defaultdict
 
 
 class AnalyticsController:
@@ -37,7 +22,6 @@ class AnalyticsController:
     @login_required
     @rol_required(['1'])
     def index():
-        """Renderiza el dashboard de analytics"""
         usuario = {
             "nombre": session.get("usuario_nombre", "Admin"),
             "rol": session.get("usuario_rol"),
@@ -51,106 +35,97 @@ class AnalyticsController:
 
     @staticmethod
     def get_kpis():
-        """MapReduce: KPIs generales del negocio"""
         try:
             if session.get("usuario_rol") != "1":
                 return jsonify({"error": "No autorizado"}), 403
 
-            hoy = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            hoy   = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
             semana = hoy - timedelta(days=7)
-            mes = hoy - timedelta(days=30)
+            mes    = hoy - timedelta(days=30)
 
-            # Ventas de hoy
-            ventas_hoy = list(db.ventas.aggregate([
-                {"$match": {"fecha": {"$gte": hoy}}},
-                {"$group": {"_id": None, "total": {"$sum": "$total"}, "count": {"$sum": 1}}}
-            ]))
+            def _agg(desde):
+                rows = db.session.query(
+                    func.sum(Venta.total).label("total"),
+                    func.count(Venta.id).label("count"),
+                ).filter(
+                    Venta.fecha_creacion >= desde,
+                    Venta.estado != Venta.ESTADO_CANCELADA,
+                ).first()
+                return float(rows.total or 0), int(rows.count or 0)
 
-            # Ventas de la semana
-            ventas_semana = list(db.ventas.aggregate([
-                {"$match": {"fecha": {"$gte": semana}}},
-                {"$group": {"_id": None, "total": {"$sum": "$total"}, "count": {"$sum": 1}}}
-            ]))
+            total_hoy,    count_hoy    = _agg(hoy)
+            total_semana, _            = _agg(semana)
+            total_mes,    count_mes    = _agg(mes)
+            ticket_promedio = round(total_mes / count_mes, 2) if count_mes else 0
 
-            # Ventas del mes
-            ventas_mes = list(db.ventas.aggregate([
-                {"$match": {"fecha": {"$gte": mes}}},
-                {"$group": {"_id": None, "total": {"$sum": "$total"}, "count": {"$sum": 1}}}
-            ]))
+            propinas_mes = db.session.query(func.sum(Venta.propina)).filter(
+                Venta.fecha_creacion >= mes,
+                Venta.estado != Venta.ESTADO_CANCELADA,
+            ).scalar() or 0
 
-            total_mes = float(ventas_mes[0]["total"]) if ventas_mes else 0
-            count_mes = int(ventas_mes[0]["count"]) if ventas_mes else 0
-            ticket_promedio = total_mes / count_mes if count_mes > 0 else 0
-
-            mesas_ocupadas = db.mesas.count_documents({"estado": "ocupada"})
-            total_mesas = db.mesas.count_documents({})
-
-            # Propinas del mes
-            propinas_mes = list(db.ventas.aggregate([
-                {"$match": {"fecha": {"$gte": mes}}},
-                {"$group": {"_id": None, "total_propinas": {"$sum": "$propina"}}}
-            ]))
-            total_propinas = float(propinas_mes[0]["total_propinas"]) if propinas_mes else 0
+            mesas_ocupadas = 0
+            total_mesas    = 0
+            try:
+                mesas_ocupadas = mongo_db.mesas.count_documents({"estado": "ocupada"})
+                total_mesas    = mongo_db.mesas.count_documents({})
+            except Exception:
+                pass
 
             return jsonify({
-                "ventas_hoy": float(ventas_hoy[0]["total"]) if ventas_hoy else 0,
-                "transacciones_hoy": int(ventas_hoy[0]["count"]) if ventas_hoy else 0,
-                "ventas_semana": float(ventas_semana[0]["total"]) if ventas_semana else 0,
-                "ventas_mes": total_mes,
+                "ventas_hoy":        total_hoy,
+                "transacciones_hoy": count_hoy,
+                "ventas_semana":     total_semana,
+                "ventas_mes":        total_mes,
                 "transacciones_mes": count_mes,
-                "ticket_promedio": round(ticket_promedio, 2),
-                "propinas_mes": round(total_propinas, 2),
-                "mesas_ocupadas": mesas_ocupadas,
-                "total_mesas": total_mesas,
-                "ocupacion_pct": round((mesas_ocupadas / total_mesas * 100) if total_mesas > 0 else 0, 1)
+                "ticket_promedio":   ticket_promedio,
+                "propinas_mes":      round(float(propinas_mes), 2),
+                "mesas_ocupadas":    mesas_ocupadas,
+                "total_mesas":       total_mesas,
+                "ocupacion_pct":     round((mesas_ocupadas / total_mesas * 100) if total_mesas else 0, 1),
             })
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
     # ==============================
-    # TOP PLATILLOS (MapReduce sobre platillos[])
+    # TOP PLATILLOS
     # ==============================
 
     @staticmethod
     def get_top_platillos():
-        """
-        MapReduce: TOP 10 platillos más vendidos por ingreso y cantidad.
-        MAP → $unwind descompone cada elemento del array platillos.
-        REDUCE → $group agrupa por nombre y suma subtotal + cantidad.
-        """
         try:
             if session.get("usuario_rol") != "1":
                 return jsonify({"error": "No autorizado"}), 403
 
             fecha_inicio = datetime.now() - timedelta(days=30)
 
-            pipeline = [
-                {"$match": {"fecha": {"$gte": fecha_inicio}}},
-                # MAP: un documento por cada platillo vendido
-                {"$unwind": "$platillos"},
-                {"$match": {"platillos.nombre": {"$exists": True, "$ne": None}}},
-                # REDUCE: agrupar por nombre del platillo
-                {"$group": {
-                    "_id": "$platillos.nombre",
-                    "total_ingreso": {"$sum": "$platillos.subtotal"},
-                    "total_cantidad": {"$sum": "$platillos.cantidad"},
-                    "precio_unitario_prom": {"$avg": "$platillos.precio_unitario"},
-                    "num_ventas": {"$sum": 1}
-                }},
-                {"$sort": {"total_ingreso": -1}},
-                {"$limit": 10},
-                {"$project": {
-                    "platillo": "$_id",
-                    "total_ingreso": {"$round": ["$total_ingreso", 2]},
-                    "total_cantidad": 1,
-                    "precio_unitario_prom": {"$round": ["$precio_unitario_prom", 2]},
-                    "num_ventas": 1,
-                    "_id": 0
-                }}
-            ]
+            ventas = Venta.query.filter(
+                Venta.fecha_creacion >= fecha_inicio,
+                Venta.estado != Venta.ESTADO_CANCELADA,
+            ).all()
 
-            resultado = list(db.ventas.aggregate(pipeline))
+            acum = defaultdict(lambda: {"total_ingreso": 0.0, "total_cantidad": 0, "num_ventas": 0, "precios": []})
+            for v in ventas:
+                for item in (v.items or []):
+                    nombre = item.get("nombre") or item.get("platillo")
+                    if not nombre:
+                        continue
+                    acum[nombre]["total_ingreso"]  += float(item.get("subtotal", 0))
+                    acum[nombre]["total_cantidad"] += int(item.get("cantidad", 0))
+                    acum[nombre]["num_ventas"]     += 1
+                    acum[nombre]["precios"].append(float(item.get("precio", 0)))
+
+            resultado = sorted([
+                {
+                    "platillo":              nombre,
+                    "total_ingreso":         round(d["total_ingreso"], 2),
+                    "total_cantidad":        d["total_cantidad"],
+                    "num_ventas":            d["num_ventas"],
+                    "precio_unitario_prom":  round(sum(d["precios"]) / len(d["precios"]), 2) if d["precios"] else 0,
+                }
+                for nombre, d in acum.items()
+            ], key=lambda x: x["total_ingreso"], reverse=True)[:10]
+
             return jsonify({"data": resultado, "periodo_dias": 30})
 
         except Exception as e:
@@ -162,47 +137,29 @@ class AnalyticsController:
 
     @staticmethod
     def get_ventas_por_dia():
-        """MapReduce: Tendencia de ventas diarias usando campo 'fecha'"""
         try:
             if session.get("usuario_rol") != "1":
                 return jsonify({"error": "No autorizado"}), 403
 
             fecha_inicio = datetime.now() - timedelta(days=30)
 
-            pipeline = [
-                {"$match": {"fecha": {"$gte": fecha_inicio}}},
-                {"$group": {
-                    "_id": {
-                        "year": {"$year": "$fecha"},
-                        "month": {"$month": "$fecha"},
-                        "day": {"$dayOfMonth": "$fecha"}
-                    },
-                    "total": {"$sum": "$total"},
-                    "transacciones": {"$sum": 1},
-                    "comensales": {"$sum": "$comensales"}
-                }},
-                {"$sort": {"_id.year": 1, "_id.month": 1, "_id.day": 1}},
-                {"$project": {
-                    "fecha": {
-                        "$dateToString": {
-                            "format": "%Y-%m-%d",
-                            "date": {
-                                "$dateFromParts": {
-                                    "year": "$_id.year",
-                                    "month": "$_id.month",
-                                    "day": "$_id.day"
-                                }
-                            }
-                        }
-                    },
-                    "total": {"$round": ["$total", 2]},
-                    "transacciones": 1,
-                    "comensales": 1,
-                    "_id": 0
-                }}
-            ]
+            rows = db.session.query(
+                cast(Venta.fecha_creacion, Date).label("fecha"),
+                func.sum(Venta.total).label("total"),
+                func.count(Venta.id).label("transacciones"),
+            ).filter(
+                Venta.fecha_creacion >= fecha_inicio,
+                Venta.estado != Venta.ESTADO_CANCELADA,
+            ).group_by(cast(Venta.fecha_creacion, Date)).order_by("fecha").all()
 
-            resultado = list(db.ventas.aggregate(pipeline))
+            resultado = [
+                {
+                    "fecha":         str(r.fecha),
+                    "total":         round(float(r.total or 0), 2),
+                    "transacciones": int(r.transacciones or 0),
+                }
+                for r in rows
+            ]
             return jsonify({"data": resultado})
 
         except Exception as e:
@@ -214,30 +171,29 @@ class AnalyticsController:
 
     @staticmethod
     def get_ventas_por_metodo_pago():
-        """MapReduce: Distribución por método de pago"""
         try:
             if session.get("usuario_rol") != "1":
                 return jsonify({"error": "No autorizado"}), 403
 
             fecha_inicio = datetime.now() - timedelta(days=30)
 
-            pipeline = [
-                {"$match": {"fecha": {"$gte": fecha_inicio}}},
-                {"$group": {
-                    "_id": "$metodo_pago",
-                    "total": {"$sum": "$total"},
-                    "count": {"$sum": 1}
-                }},
-                {"$sort": {"total": -1}},
-                {"$project": {
-                    "metodo": "$_id",
-                    "total": {"$round": ["$total", 2]},
-                    "count": 1,
-                    "_id": 0
-                }}
-            ]
+            rows = db.session.query(
+                Venta.metodo_pago,
+                func.sum(Venta.total).label("total"),
+                func.count(Venta.id).label("count"),
+            ).filter(
+                Venta.fecha_creacion >= fecha_inicio,
+                Venta.estado != Venta.ESTADO_CANCELADA,
+            ).group_by(Venta.metodo_pago).order_by(func.sum(Venta.total).desc()).all()
 
-            resultado = list(db.ventas.aggregate(pipeline))
+            resultado = [
+                {
+                    "metodo": r.metodo_pago,
+                    "total":  round(float(r.total or 0), 2),
+                    "count":  int(r.count or 0),
+                }
+                for r in rows
+            ]
             return jsonify({"data": resultado})
 
         except Exception as e:
@@ -249,30 +205,29 @@ class AnalyticsController:
 
     @staticmethod
     def get_horas_pico():
-        """MapReduce: Distribución de ventas por hora del día usando campo 'fecha'"""
         try:
             if session.get("usuario_rol") != "1":
                 return jsonify({"error": "No autorizado"}), 403
 
             fecha_inicio = datetime.now() - timedelta(days=30)
 
-            pipeline = [
-                {"$match": {"fecha": {"$gte": fecha_inicio}}},
-                {"$group": {
-                    "_id": {"$hour": "$fecha"},
-                    "total": {"$sum": "$total"},
-                    "count": {"$sum": 1}
-                }},
-                {"$sort": {"_id": 1}},
-                {"$project": {
-                    "hora": "$_id",
-                    "total": {"$round": ["$total", 2]},
-                    "count": 1,
-                    "_id": 0
-                }}
-            ]
+            rows = db.session.query(
+                extract("hour", Venta.fecha_creacion).label("hora"),
+                func.sum(Venta.total).label("total"),
+                func.count(Venta.id).label("count"),
+            ).filter(
+                Venta.fecha_creacion >= fecha_inicio,
+                Venta.estado != Venta.ESTADO_CANCELADA,
+            ).group_by(extract("hour", Venta.fecha_creacion)).order_by("hora").all()
 
-            resultado = list(db.ventas.aggregate(pipeline))
+            resultado = [
+                {
+                    "hora":  int(r.hora),
+                    "total": round(float(r.total or 0), 2),
+                    "count": int(r.count or 0),
+                }
+                for r in rows
+            ]
             return jsonify({"data": resultado})
 
         except Exception as e:
@@ -284,81 +239,71 @@ class AnalyticsController:
 
     @staticmethod
     def get_rendimiento_meseros():
-        """MapReduce: Ventas, ticket promedio y propinas por mesero"""
         try:
             if session.get("usuario_rol") != "1":
                 return jsonify({"error": "No autorizado"}), 403
 
             fecha_inicio = datetime.now() - timedelta(days=30)
 
-            pipeline = [
-                {"$match": {
-                    "fecha": {"$gte": fecha_inicio},
-                    "mesero_nombre": {"$exists": True, "$ne": ""}
-                }},
-                {"$group": {
-                    "_id": "$mesero_nombre",
-                    "total_ventas": {"$sum": "$total"},
-                    "num_ventas": {"$sum": 1},
-                    "propinas": {"$sum": "$propina"},
-                    "comensales_atendidos": {"$sum": "$comensales"}
-                }},
-                {"$sort": {"total_ventas": -1}},
-                {"$limit": 10},
-                {"$project": {
-                    "mesero": "$_id",
-                    "total_ventas": {"$round": ["$total_ventas", 2]},
-                    "num_ventas": 1,
-                    "propinas": {"$round": ["$propinas", 2]},
-                    "comensales_atendidos": 1,
-                    "ticket_promedio": {
-                        "$round": [{"$divide": ["$total_ventas", "$num_ventas"]}, 2]
-                    },
-                    "_id": 0
-                }}
-            ]
+            rows = db.session.query(
+                Venta.mesero_nombre,
+                func.sum(Venta.total).label("total_ventas"),
+                func.count(Venta.id).label("num_ventas"),
+                func.sum(Venta.propina).label("propinas"),
+            ).filter(
+                Venta.fecha_creacion >= fecha_inicio,
+                Venta.estado != Venta.ESTADO_CANCELADA,
+                Venta.mesero_nombre != "",
+            ).group_by(Venta.mesero_nombre).order_by(func.sum(Venta.total).desc()).limit(10).all()
 
-            resultado = list(db.ventas.aggregate(pipeline))
+            resultado = [
+                {
+                    "mesero":          r.mesero_nombre,
+                    "total_ventas":    round(float(r.total_ventas or 0), 2),
+                    "num_ventas":      int(r.num_ventas or 0),
+                    "propinas":        round(float(r.propinas or 0), 2),
+                    "ticket_promedio": round(float(r.total_ventas or 0) / int(r.num_ventas or 1), 2),
+                    "comensales_atendidos": 0,
+                }
+                for r in rows
+            ]
             return jsonify({"data": resultado})
 
         except Exception as e:
             return jsonify({"error": str(e)}), 500
 
     # ==============================
-    # PLATILLOS POR MESA (promedio de consumo)
+    # VENTAS POR MESA
     # ==============================
 
     @staticmethod
     def get_ventas_por_mesa():
-        """MapReduce: Consumo promedio por número de mesa"""
         try:
             if session.get("usuario_rol") != "1":
                 return jsonify({"error": "No autorizado"}), 403
 
             fecha_inicio = datetime.now() - timedelta(days=30)
 
-            pipeline = [
-                {"$match": {"fecha": {"$gte": fecha_inicio}}},
-                {"$group": {
-                    "_id": "$mesa_numero",
-                    "total_ventas": {"$sum": "$total"},
-                    "num_visitas": {"$sum": 1},
-                    "comensales_total": {"$sum": "$comensales"},
-                    "ticket_promedio": {"$avg": "$total"}
-                }},
-                {"$sort": {"total_ventas": -1}},
-                {"$limit": 15},
-                {"$project": {
-                    "mesa": "$_id",
-                    "total_ventas": {"$round": ["$total_ventas", 2]},
-                    "num_visitas": 1,
-                    "comensales_total": 1,
-                    "ticket_promedio": {"$round": ["$ticket_promedio", 2]},
-                    "_id": 0
-                }}
-            ]
+            rows = db.session.query(
+                Venta.mesa_nombre,
+                func.sum(Venta.total).label("total_ventas"),
+                func.count(Venta.id).label("num_visitas"),
+                func.avg(Venta.total).label("ticket_promedio"),
+            ).filter(
+                Venta.fecha_creacion >= fecha_inicio,
+                Venta.estado != Venta.ESTADO_CANCELADA,
+            ).group_by(Venta.mesa_nombre).order_by(func.sum(Venta.total).desc()).limit(15).all()
 
-            resultado = list(db.ventas.aggregate(pipeline))
+            resultado = [
+                {
+                    "mesa":            r.mesa_nombre or "Sin mesa",
+                    "total_ventas":    round(float(r.total_ventas or 0), 2),
+                    "num_visitas":     int(r.num_visitas or 0),
+                    "ticket_promedio": round(float(r.ticket_promedio or 0), 2),
+                    "comensales_total": 0,
+                }
+                for r in rows
+            ]
             return jsonify({"data": resultado})
 
         except Exception as e:
