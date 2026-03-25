@@ -542,17 +542,6 @@ def cocina_listos():
     # Placeholder: implementar vista
     return render_template("cocina/listos.html")
 
-@routes_bp.route("/cocina/inventario")
-@login_required
-@rol_required(['3'])
-def cocina_inventario():
-    """Vista de consulta de inventario (solo lectura)"""
-    if "usuario_rol" not in session or str(session["usuario_rol"]) != "3":
-        return redirect(url_for("routes.login"))
-    
-    # Placeholder: implementar vista de inventario
-    return render_template("cocina/dashboard.html")
-
 
 # API: Obtener pedidos pendientes
 @routes_bp.route("/api/cocina/pedidos/pendientes", methods=["GET"])
@@ -615,11 +604,11 @@ def api_cocina_estadisticas():
 # ============================================
 
 # Dashboard
-@routes_bp.route("/inventario/dashboard")
+@routes_bp.route("/cocina/inventario")
 @login_required
-@rol_required(['1', '4'])  # Admin e Inventario
-def dashboard_inventario():
-    return InventarioController.dashboard()
+@rol_required(['1', '3', '4'])
+def cocina_inventario():
+    return redirect(url_for('routes.dashboard_inventario'))
 
 # --- Gestión de Insumos ---
 @routes_bp.route("/inventario/insumos")
@@ -627,6 +616,12 @@ def dashboard_inventario():
 @rol_required(['1', '4'])
 def inventario_insumos():
     return InventarioController.lista_insumos()
+
+@routes_bp.route("/inventario/dashboard")
+@login_required
+@rol_required(['1', '3', '4'])
+def dashboard_inventario():
+    return DashboardController.inventario()
 
 @routes_bp.route("/inventario/insumos/crear", methods=["GET", "POST"])
 @login_required

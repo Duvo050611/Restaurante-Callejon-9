@@ -1,4 +1,4 @@
-{% extends "layout/layout_base.html" %}
+{% extends "layout/layout_cocina.html" %}
 
 {% block title %}Pedidos Listos{% endblock %}
 {% block page_title %}Pedidos Listos para Servir{% endblock %}
@@ -57,7 +57,7 @@
 <!-- LAYOUT: GRID + LISTADO LATERAL -->
 <div class="grid grid-cols-1 lg:grid-cols-4 gap-6">
     
-    <!-- COLUMNA PRINCIPAL: RECTÁNGULOS CON TOTAL -->
+    <!-- COLUMNA PRINCIPAL -->
     <div class="lg:col-span-3">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="contenedor-listos">
             <div class="col-span-2 text-center py-16 text-gray-400">
@@ -68,7 +68,7 @@
         </div>
     </div>
     
-    <!-- COLUMNA LATERAL: LISTADO RÁPIDO -->
+    <!-- COLUMNA LATERAL -->
     <div class="lg:col-span-1">
         <div class="bg-white rounded-xl shadow-md p-4 sticky top-20 max-h-[600px] overflow-y-auto">
             <h3 class="font-bold text-lg mb-4 text-gray-800 pb-3 border-b-2 border-green-300">
@@ -99,8 +99,6 @@
         
         <!-- Modal Body -->
         <div class="p-6">
-            
-            <!-- Info General -->
             <div class="grid grid-cols-2 gap-4 mb-6 p-4 bg-gray-50 rounded-lg">
                 <div>
                     <p class="text-xs text-gray-600 font-semibold">TIEMPO TOTAL</p>
@@ -112,16 +110,12 @@
                 </div>
             </div>
             
-            <!-- Platillos -->
             <div class="mb-6">
                 <h3 class="font-bold text-lg mb-4 text-gray-800 pb-2 border-b-2 border-green-300">
                     <i class="bi bi-egg-fried"></i> Platillos Preparados
                 </h3>
-                <div id="modal-listos-platillos" class="space-y-3">
-                    <!-- Los platillos se cargan aquí -->
-                </div>
+                <div id="modal-listos-platillos" class="space-y-3"></div>
             </div>
-            
         </div>
         
         <!-- Modal Footer -->
@@ -140,6 +134,7 @@
 {% endblock %}
 
 {% block extra_css %}
+{{ super() }}
 <link rel="stylesheet" href="{{ url_for('static', filename='css/cocina/listos.css') }}">
 {% endblock %}
 
@@ -151,5 +146,5 @@
 <a href="{{ url_for('routes.cocina_pedidos') }}">Pedidos Pendientes</a>
 <a href="{{ url_for('routes.cocina_en_proceso') }}">En Preparación</a>
 <a href="{{ url_for('routes.cocina_listos') }}">Listos</a>
-<a href="{{ url_for('routes.cocina_inventario') }}">Inventario</a>
+<a href="{{ url_for('routes.dashboard_inventario') }}">Inventario</a>
 {% endblock %}

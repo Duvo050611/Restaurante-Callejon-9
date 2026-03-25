@@ -111,9 +111,10 @@ class DashboardController:
     @staticmethod
     def inventario():
         """Dashboard principal de Inventario (Rol 4)"""
-        if "usuario_rol" not in session or str(session["usuario_rol"]) != "4":
+        rol = str(session.get("usuario_rol", ""))
+        if rol not in ["1", "3", "4"]:
             return redirect(url_for("routes.login"))
-    
+
         return InventarioController.dashboard()
     # ==========================================
     # GESTIÓN DE EMPLEADOS
