@@ -11,7 +11,7 @@ from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 from controllers.notificaciones.notificacion_controller import NotificacionSistemaController
 import logging
-from datetime import datetime
+import json
 
 logging.basicConfig(level=logging.INFO)
 
@@ -476,12 +476,61 @@ class InventarioController:
     @staticmethod
     def reportes():
         """Dashboard de reportes de inventario"""
-        if "usuario_rol" not in session or str(session["usuario_rol"]) not in ["1", "4"]:
+        if "usuario_rol" not in session or str(session["usuario_rol"]) not in ["1", "4", "3"]:
             return redirect(url_for("routes.login"))
-        
-        return render_template("inventario/reportes/index.html")
-    
-    # En controllers/inventario/inventarioController.py
+
+        try:
+            insumos = Insumo.obtener_todos({"activo": True})
+            criticos = Insumo.obtener_stock_critico()
+
+            total_insumos = len(insumos)
+            total_criticos = len(criticos)
+            total_normales = total_insumos - total_criticos
+            valor_total = round(sum(
+                float(i.get("stock_actual", 0)) * float(i.get("costo_unitario", 0))
+                for i in insumos
+            ), 2)
+
+            # Donut: estado del stock
+            chart_estado = json.dumps({
+                "labels": ["Normal", "Crítico"],
+                "data": [total_normales, total_criticos],
+                "colors": ["#22c55e", "#ef4444"]
+            })
+
+            # Top 5 insumos por valor en inventario
+            top5 = sorted(
+                insumos,
+                key=lambda x: float(x.get("stock_actual", 0)) * float(x.get("costo_unitario", 0)),
+                reverse=True
+            )[:5]
+            chart_top_valor = json.dumps({
+                "labels": [i.get("nombre", "") for i in top5],
+                "data": [
+                    round(float(i.get("stock_actual", 0)) * float(i.get("costo_unitario", 0)), 2)
+                    for i in top5
+                ]
+            })
+
+            return render_template(
+                "reports/inventario.html",
+                total_insumos=total_insumos,
+                total_criticos=total_criticos,
+                total_normales=total_normales,
+                valor_total=valor_total,
+                chart_estado=chart_estado,
+                chart_top_valor=chart_top_valor
+            )
+
+        except Exception as e:
+            logging.error(f"Error en reportes inventario: {e}")
+            return render_template(
+                "reports/inventario.html",
+                total_insumos=0, total_criticos=0,
+                total_normales=0, valor_total=0,
+                chart_estado=json.dumps({"labels": [], "data": [], "colors": []}),
+                chart_top_valor=json.dumps({"labels": [], "data": []})
+            )
 
     
     @staticmethod
