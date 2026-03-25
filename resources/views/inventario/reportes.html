@@ -35,48 +35,198 @@
 {% endblock %}
 
 {% block content %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
-<!-- PANEL PRINCIPAL -->
-<div class="bg-white rounded-xl shadow-md p-6">
+<!-- TARJETAS RESUMEN -->
+<div class="grid grid-cols-1 md:grid-cols-4 gap-4 mb-6">
+    <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-blue-100 flex items-center justify-center">
+            <i class="bi bi-box-seam text-blue-600 text-xl"></i>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Total Insumos</p>
+            <p class="text-2xl font-bold text-gray-800">{{ total_insumos }}</p>
+        </div>
+    </div>
 
-    <div class="flex items-center gap-2 mb-6">
-        <i class="bi bi-graph-up-arrow text-blue-600 text-2xl"></i>
-        <h3 class="text-xl font-bold text-gray-800">
-            Dashboard de Reportes
+    <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-green-100 flex items-center justify-center">
+            <i class="bi bi-check-circle text-green-600 text-xl"></i>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Stock Normal</p>
+            <p class="text-2xl font-bold text-green-600">{{ total_normales }}</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-red-100 flex items-center justify-center">
+            <i class="bi bi-exclamation-triangle text-red-600 text-xl"></i>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Stock Crítico</p>
+            <p class="text-2xl font-bold text-red-600">{{ total_criticos }}</p>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm p-5 flex items-center gap-4">
+        <div class="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center">
+            <i class="bi bi-currency-dollar text-purple-600 text-xl"></i>
+        </div>
+        <div>
+            <p class="text-sm text-gray-500">Valor Total</p>
+            <p class="text-2xl font-bold text-purple-600">${{ "%.2f"|format(valor_total) }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- FILA 1: Donut + Barras por categoría -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <i class="bi bi-pie-chart text-blue-500"></i>
+            Estado del Stock
         </h3>
+        <div class="flex justify-center">
+            <canvas id="chartEstado" style="max-height: 240px;"></canvas>
+        </div>
     </div>
 
-    <!-- TARJETAS RESUMEN (ESTÁTICAS POR AHORA) -->
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
-
-        <div class="bg-blue-50 p-5 rounded-lg">
-            <p class="text-sm text-gray-500">Total de Insumos</p>
-            <p class="text-2xl font-bold text-blue-700">--</p>
-        </div>
-
-        <div class="bg-red-50 p-5 rounded-lg">
-            <p class="text-sm text-gray-500">Insumos en Crítico</p>
-            <p class="text-2xl font-bold text-red-700">--</p>
-        </div>
-
-        <div class="bg-green-50 p-5 rounded-lg">
-            <p class="text-sm text-gray-500">Insumos Normales</p>
-            <p class="text-2xl font-bold text-green-700">--</p>
-        </div>
-
-    </div>
-
-    <!-- MENSAJE TEMPORAL -->
-    <div class="text-center py-12 text-gray-500">
-        <i class="bi bi-bar-chart-line text-6xl mb-4 block"></i>
-        <p class="text-lg font-medium">
-            Módulo de reportes en construcción
-        </p>
-        <p class="text-sm">
-            Aquí se mostrarán gráficas y estadísticas del inventario
-        </p>
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <i class="bi bi-bar-chart text-orange-500"></i>
+            Insumos por Categoría
+        </h3>
+        <canvas id="chartCategorias" style="max-height: 240px;"></canvas>
     </div>
 
 </div>
+
+<!-- FILA 2: Movimientos + Top 5 valor -->
+<div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <i class="bi bi-arrow-left-right text-green-500"></i>
+            Movimientos del Último Mes
+        </h3>
+        <canvas id="chartMovimientos" style="max-height: 240px;"></canvas>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm p-6">
+        <h3 class="text-base font-semibold text-gray-700 mb-4 flex items-center gap-2">
+            <i class="bi bi-trophy text-purple-500"></i>
+            Top 5 Insumos por Valor en Inventario
+        </h3>
+        <canvas id="chartTopValor" style="max-height: 240px;"></canvas>
+    </div>
+
+</div>
+
+<script>
+const chartEstadoData = {{ chart_estado | safe }};
+const chartCategData  = {{ chart_categorias | safe }};
+const chartMovData    = {{ chart_movimientos | safe }};
+const chartTopData    = {{ chart_top_valor | safe }};
+
+// Chart 1: Donut — Estado del stock
+new Chart(document.getElementById('chartEstado'), {
+    type: 'doughnut',
+    data: {
+        labels: chartEstadoData.labels,
+        datasets: [{
+            data: chartEstadoData.data,
+            backgroundColor: chartEstadoData.colors,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+                callbacks: {
+                    label: ctx => ` ${ctx.label}: ${ctx.parsed} insumos`
+                }
+            }
+        }
+    }
+});
+
+// Chart 2: Barras — Insumos por categoría
+new Chart(document.getElementById('chartCategorias'), {
+    type: 'bar',
+    data: {
+        labels: chartCategData.labels,
+        datasets: [{
+            label: 'Insumos',
+            data: chartCategData.data,
+            backgroundColor: '#f97316cc',
+            borderColor: '#f97316',
+            borderWidth: 1,
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+    }
+});
+
+// Chart 3: Barras — Movimientos del mes por tipo
+new Chart(document.getElementById('chartMovimientos'), {
+    type: 'bar',
+    data: {
+        labels: chartMovData.labels,
+        datasets: [{
+            label: 'Movimientos',
+            data: chartMovData.data,
+            backgroundColor: chartMovData.colors.map(c => c + 'cc'),
+            borderColor: chartMovData.colors,
+            borderWidth: 1,
+            borderRadius: 6
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            y: { beginAtZero: true, ticks: { stepSize: 1 } }
+        }
+    }
+});
+
+// Chart 4: Horizontal — Top 5 por valor en inventario
+new Chart(document.getElementById('chartTopValor'), {
+    type: 'bar',
+    data: {
+        labels: chartTopData.labels,
+        datasets: [{
+            label: 'Valor ($)',
+            data: chartTopData.data,
+            backgroundColor: '#a855f7cc',
+            borderColor: '#a855f7',
+            borderWidth: 1,
+            borderRadius: 6
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: {
+                beginAtZero: true,
+                ticks: { callback: val => '$' + val.toFixed(2) }
+            }
+        }
+    }
+});
+</script>
 
 {% endblock %}
