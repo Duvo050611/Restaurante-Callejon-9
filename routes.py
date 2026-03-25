@@ -1,22 +1,34 @@
 """
 Módulo de Rutas - Sistema de Restaurante Callejón 9
-Roles: 1=Admin, 2=Mesero, 3=Cocina, 4=Inventario
+Roles: 1=Admin, 2=Mesero, 3=Cocina
 """
 from flask import Blueprint, render_template, session, redirect, url_for, request
+from flask import render_template, session, redirect, url_for, jsonify
 from controllers.auth.AuthController import AuthController, login_required, rol_required, permiso_required
 from controllers.dashboard.dashboard_controller import DashboardController
 from controllers.admin.BackupController import BackupController
+from controllers.historial.historialController import HistorialController
 from controllers.inventario.inventarioController import InventarioController
 from models.inventario_model import Insumo
 from flask import render_template
 from controllers.dashboard.dashboardApiController import DashboardAPIController
+from controllers.comanda.comandaController import ComandaController
+from controllers.mesa.mesaController import MesaController
+from flask import jsonify, request
 from controllers.notificaciones.notificacion_controller import NotificacionController
+from controllers.propina.propinasController import PropinasController
+from controllers.cocina.cocinaController import CocinaController
+from models.mesa_model import Mesa
+from models.comanda_model import Comanda
+from models.producto_model import Producto
+from config.db import db
 from controllers.settings.settingsController import SettingsController
 
 from controllers.menu.menuController import MenuController
 
 from controllers.venta.ventasController import VentasController
 from controllers.analytics.analytics_controller import AnalyticsController
+from controllers.pago.mercadoPagoController import MercadoPagoController
 
 routes_bp = Blueprint("routes", __name__)
 
@@ -335,83 +347,159 @@ def admin_reportes():
 @login_required
 @rol_required(['2'])
 def dashboard_mesero():
-    """Dashboard principal del mesero"""
     return DashboardController.mesero()
 
 @routes_bp.route("/mesero/mesas")
 @login_required
 @rol_required(['2'])
 def mesero_mesas():
-    """Vista de mesas asignadas"""
-    if "usuario_rol" not in session or str(session["usuario_rol"]) != "2":
+    perfil_mesero = session.get("perfil_mesero")
+    if not perfil_mesero:
         return redirect(url_for("routes.login"))
-    
-    perfil_mesero = session.get("perfil_mesero", {})
+
     stats = {
         "mesas_asignadas": perfil_mesero.get("mesas_asignadas", []),
         "comandas_activas": 0,
         "propinas_dia": perfil_mesero.get("propinas", {}).get("acumulada_dia", 0)
     }
-    
-    return render_template("mesero/dashboard.html",
-                         perfil=perfil_mesero,
-                         stats=stats)
+
+    return render_template(
+        "mesero/dashboard.html",
+        perfil=perfil_mesero,
+        stats=stats
+    )
 
 @routes_bp.route("/mesero/comandas")
 @login_required
 @rol_required(['2'])
 def mesero_comandas():
-    """Vista de comandas activas"""
-    if "usuario_rol" not in session or str(session["usuario_rol"]) != "2":
+    perfil_mesero = session.get("perfil_mesero")
+    if not perfil_mesero:
         return redirect(url_for("routes.login"))
-    
-    perfil_mesero = session.get("perfil_mesero", {})
-    stats = {
-        "mesas_asignadas": perfil_mesero.get("mesas_asignadas", []),
-    }
-    
-    return render_template("mesero/comandas.html",
-                         perfil=perfil_mesero,
-                         stats=stats)
+
+    return render_template(
+        "mesero/comandas.html",
+        perfil=perfil_mesero,
+        stats={"mesas_asignadas": perfil_mesero.get("mesas_asignadas", [])}
+    )
+
 
 @routes_bp.route("/mesero/menu")
 @login_required
 @rol_required(['2'])
 def mesero_menu():
-    """Vista del menú para tomar pedidos"""
-    if "usuario_rol" not in session or str(session["usuario_rol"]) != "2":
+    perfil_mesero = session.get("perfil_mesero")
+    if not perfil_mesero:
         return redirect(url_for("routes.login"))
-    
-    perfil_mesero = session.get("perfil_mesero", {})
-    stats = {
-        "mesas_asignadas": perfil_mesero.get("mesas_asignadas", []),
-    }
-    
-    return render_template("mesero/menu.html",
-                         perfil=perfil_mesero,
-                         stats=stats)
+
+    return render_template(
+        "mesero/mesero_menu.html",
+        perfil=perfil_mesero,
+        stats={"mesas_asignadas": perfil_mesero.get("mesas_asignadas", [])}
+    )
+
 
 @routes_bp.route("/mesero/propinas")
 @login_required
 @rol_required(['2'])
 def mesero_propinas():
-    """Vista de propinas del día"""
-    if "usuario_rol" not in session or str(session["usuario_rol"]) != "2":
+    perfil_mesero = session.get("perfil_mesero")
+    if not perfil_mesero:
         return redirect(url_for("routes.login"))
-    
-    # Placeholder: implementar lógica de propinas
-    return render_template("mesero/dashboard.html")
+
+    return render_template("mesero/mesero_propinas.html", perfil=perfil_mesero)
+
+@routes_bp.route("/api/mesero/propinas/hoy", methods=["GET"])
+@login_required
+@rol_required(['2'])
+def api_propinas_hoy():
+    return PropinasController.propinas_hoy()
 
 @routes_bp.route("/mesero/historial")
 @login_required
 @rol_required(['2'])
 def mesero_historial():
-    """Vista de historial de comandas"""
-    if "usuario_rol" not in session or str(session["usuario_rol"]) != "2":
+    perfil_mesero = session.get("perfil_mesero")
+    if not perfil_mesero:
         return redirect(url_for("routes.login"))
-    
-    # Placeholder: implementar lógica de historial
-    return render_template("mesero/comandas.html")
+
+    return render_template("mesero/mesero_historial.html", perfil=perfil_mesero)
+
+@routes_bp.route("/api/mesero/historial", methods=["GET"])
+@login_required
+@rol_required(['2'])
+def api_mesero_historial():
+    return HistorialController.historial_mesero()
+
+# =========================
+# API GENERALES
+# =========================
+
+@routes_bp.route("/api/menu", methods=["GET"])
+@login_required
+@rol_required(['1', '2'])
+def api_get_menu():
+    productos = Producto.obtener_todo()
+    return jsonify({"success": True, "menu": productos})
+
+
+@routes_bp.route("/api/mesero/estadisticas/dia", methods=["GET"])
+@login_required
+@rol_required(['2'])
+def api_mesero_estadisticas_dia():
+    return ComandaController.estadisticas_dia_mesero()
+
+
+# =========================
+# API MESAS
+# =========================
+
+@routes_bp.route("/api/mesero/mesas/estado", methods=["GET"])
+@login_required
+@rol_required(['2'])
+def api_mesero_mesas_estado():
+    return MesaController.estado_mesas_mesero()
+
+
+@routes_bp.route("/api/mesero/mesa/<numero>", methods=["GET"])
+@login_required
+def api_mesero_mesa_detalle(numero):
+    return MesaController.detalle_mesa(numero)
+
+# =========================
+# API COMANDAS
+# =========================
+
+@routes_bp.route("/api/mesero/comandas/activas", methods=["GET"])
+@login_required
+@rol_required(['2'])
+def api_mesero_comandas_activas():
+    return ComandaController.comandas_activas()
+
+@routes_bp.route("/api/mesero/cuenta/abrir", methods=["POST"])
+@login_required
+@rol_required(['2'])
+def api_abrir_cuenta():
+    return ComandaController.abrir_cuenta()
+
+@routes_bp.route("/api/mesero/comanda/<cuenta_id>/items", methods=["POST"])
+@login_required
+@rol_required(['2'])
+def api_guardar_items_comanda(cuenta_id):
+    return ComandaController.guardar_items(cuenta_id)
+
+@routes_bp.route("/api/mesero/cuenta/<cuenta_id>/cerrar", methods=["POST"])
+@login_required
+@rol_required(['2'])
+def api_cerrar_cuenta(cuenta_id):
+    return ComandaController.cerrar_cuenta(cuenta_id)
+
+@routes_bp.route("/api/mesero/comandas/cerradas", methods=["GET"])
+@login_required
+@rol_required(['2'])
+def api_comandas_cerradas():
+    return ComandaController.comandas_cerradas()
+
 
 # ============================================
 # PANEL DE COCINA (Rol 3)
@@ -442,11 +530,8 @@ def cocina_pedidos():
 @rol_required(['3'])
 def cocina_en_proceso():
     """Vista de pedidos en preparación"""
-    if "usuario_rol" not in session or str(session["usuario_rol"]) != "3":
-        return redirect(url_for("routes.login"))
-    
     # Placeholder: implementar vista
-    return render_template("cocina/dashboard.html")
+    return render_template("cocina/en_proceso.html")
 
 @routes_bp.route("/cocina/listos")
 @login_required
@@ -457,29 +542,75 @@ def cocina_listos():
         return redirect(url_for("routes.login"))
     
     # Placeholder: implementar vista
-    return render_template("cocina/dashboard.html")
+    return render_template("cocina/listos.html")
 
-@routes_bp.route("/cocina/inventario")
+
+# API: Obtener pedidos pendientes
+@routes_bp.route("/api/cocina/pedidos/pendientes", methods=["GET"])
 @login_required
-@rol_required(['3'])
-def cocina_inventario():
-    """Vista de consulta de inventario (solo lectura)"""
-    if "usuario_rol" not in session or str(session["usuario_rol"]) != "3":
-        return redirect(url_for("routes.login"))
-    
-    # Placeholder: implementar vista de inventario
-    return render_template("cocina/dashboard.html")
+@rol_required(['1', '3'])  # Admin y Cocina
+def api_cocina_pedidos_pendientes():
+    """Obtiene todos los pedidos pendientes de preparación"""
+    return CocinaController.obtener_pedidos_pendientes()
+
+# API: Obtener pedidos en proceso
+@routes_bp.route("/api/cocina/pedidos/en-proceso", methods=["GET"])
+@login_required
+@rol_required(['1', '3'])
+def api_cocina_pedidos_en_proceso():
+    """Obtiene pedidos que están siendo preparados"""
+    return CocinaController.obtener_pedidos_en_proceso()
+
+# API: Obtener pedidos listos
+@routes_bp.route("/api/cocina/pedidos/listos", methods=["GET"])
+@login_required
+@rol_required(['1', '3'])
+def api_cocina_pedidos_listos():
+    """Obtiene pedidos listos para servir"""
+    return CocinaController.obtener_pedidos_listos()
+
+# API: Iniciar preparación de pedido
+@routes_bp.route("/api/cocina/pedido/iniciar", methods=["POST"])
+@login_required
+@rol_required(['1', '3'])
+def api_cocina_iniciar_preparacion():
+    """Marca items como en preparación"""
+    return CocinaController.iniciar_preparacion()
+
+# API: Marcar pedido como listo
+@routes_bp.route("/api/cocina/pedido/listo", methods=["POST"])
+@login_required
+@rol_required(['1', '3'])
+def api_cocina_marcar_listo():
+    """Marca items como listos para servir"""
+    return CocinaController.marcar_como_listo()
+
+# API: Marcar pedido como entregado (desde mesero)
+@routes_bp.route("/api/cocina/pedido/entregado", methods=["POST"])
+@login_required
+@rol_required(['1', '2', '3'])  # Admin, Mesero y Cocina
+def api_cocina_marcar_entregado():
+    """Marca items como entregados"""
+    return CocinaController.marcar_como_entregado()
+
+# API: Estadísticas de cocina
+@routes_bp.route("/api/cocina/estadisticas", methods=["GET"])
+@login_required
+@rol_required(['1', '3'])
+def api_cocina_estadisticas():
+    """Obtiene estadísticas de rendimiento de cocina"""
+    return CocinaController.obtener_estadisticas_cocina()
 
 # ============================================
 #  PANEL DE INVENTARIO (Rol 4)
 # ============================================
 
 # Dashboard
-@routes_bp.route("/inventario/dashboard")
+@routes_bp.route("/cocina/inventario")
 @login_required
-@rol_required(['1', '4', '3'])  # Admin e Inventario
-def dashboard_inventario():
-    return InventarioController.dashboard()
+@rol_required(['1', '3', '4'])
+def cocina_inventario():
+    return redirect(url_for('routes.dashboard_inventario'))
 
 # --- Gestión de Insumos ---//
 @routes_bp.route("/inventario/insumos")
@@ -491,6 +622,12 @@ def inventario_insumos():
         "inventario/insumos.html",
         insumos=insumos
     )
+
+@routes_bp.route("/inventario/dashboard")
+@login_required
+@rol_required(['1', '3', '4'])
+def dashboard_inventario():
+    return DashboardController.inventario()
 
 @routes_bp.route("/inventario/insumos/crear", methods=["GET", "POST"])
 @login_required
@@ -813,3 +950,51 @@ def register_reports_routes(app):
 # ============================================
 #  FIN DEL MÓDULO DE RUTAS
 # ============================================
+# ============================================
+# 💳 MERCADO PAGO - PAGOS EN LÍNEA
+# ============================================
+
+@routes_bp.route("/api/pago/crear/<cuenta_id>", methods=["POST"])
+@login_required
+@rol_required(['2'])
+def crear_pago(cuenta_id):
+    """Crea una preferencia de pago en Mercado Pago"""
+    from bson import ObjectId
+    return MercadoPagoController.crear_preferencia(ObjectId(cuenta_id))
+
+# 🔥 RUTAS DE RESPUESTA DE MERCADO PAGO
+@routes_bp.route("/pago/exitoso")
+def pago_exitoso():
+    """Procesa el pago exitoso y cierra la cuenta"""
+    return MercadoPagoController.procesar_pago_exitoso()
+
+@routes_bp.route("/pago/fallido")
+def pago_fallido():
+    """Procesa un pago fallido"""
+    return MercadoPagoController.procesar_pago_fallido()
+
+@routes_bp.route("/pago/pendiente")
+def pago_pendiente():
+    """Procesa un pago pendiente"""
+    return MercadoPagoController.procesar_pago_pendiente()
+
+# 🔥 WEBHOOK DE MERCADO PAGO (IPN)
+@routes_bp.route("/api/webhook/mercadopago", methods=["POST"])
+def webhook_mercadopago():
+    """Recibe notificaciones de estado de pagos de Mercado Pago"""
+    return MercadoPagoController.webhook()
+
+@routes_bp.route("/api/pago/verificar", methods=["GET"])
+@login_required
+@rol_required(['2'])
+def verificar_pago():
+    """Verifica el estado de un pago consultando Mercado Pago"""
+    cuenta_id = request.args.get("cuenta_id")
+    
+    if not cuenta_id:
+        return jsonify({
+            "success": False,
+            "error": "Falta cuenta_id"
+        }), 400
+    
+    return MercadoPagoController.verificar_pago_mercadopago(cuenta_id)

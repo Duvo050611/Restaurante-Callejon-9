@@ -8,7 +8,7 @@
     <title>{% block title %}Callejon 19{% endblock %} - Sistema de Restaurante</title>
     
     <!-- Favicon -->
-    <link rel="shortcut icon" href="{{ url_for('static', filename='img/callejon9') }}" type="image/x-icon">
+    <link rel="shortcut icon" href="{{ url_for('static', filename='img/callejon9.jpeg') }}" type="image/x-icon">
     
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -272,56 +272,46 @@
             </div>
             
             <!-- Navegacion Principal -->
-    <nav class="sidebar-nav">
-    <!-- Dashboard -->
-    {#
-    <a href="{{ url_for('routes.dashboard_admin') }}" class="nav-link" id="nav-dashboard">
-        <i class="bi bi-speedometer2 text-lg"></i>
-        <span>Centro de Control</span>
-    </a> 
-    #}
-    
-    <!-- Menu -->
-    {#
-    <a href="{{ url_for('routes.admin_menu') }}" class="nav-link" id="nav-menu">
-        <i class="bi bi-journal-text text-lg"></i>
-        <span>Menu</span>
-    </a>
-    #}
-    {#
-    <!-- Ventas -->
-    <a href="{{ url_for('routes.ventas_dashboard') }}" class="nav-link" id="nav-ventas">
-        <i class="bi bi-cash-stack text-lg"></i>
-        <span>Ventas</span>
-    </a>
-    #}
-    
-    <!-- Reportes -->
-    {#
-    <a href="{{ url_for('reports.index') }}" class="nav-link" id="nav-reportes">
-        <i class="bi bi-graph-up text-lg"></i>
-        <span>Reportes</span>
-    </a>
-    #}
-    
-    <!-- Analytics -->
-    {% if session.usuario_rol == '1' %}
-    <a href="{{ url_for('routes.analytics_index') }}" class="nav-link" id="nav-analytics">
-        <i class="bi bi-bar-chart-line text-lg"></i>
-        <span>Analytics</span>
-    </a>
-    {% endif %}
-    
-    <!-- Configuracion -->
-    {#
-    <a href="{{ url_for('routes.settings') }}" class="nav-link" id="nav-settings">
-        <i class="bi bi-gear text-lg"></i>
-        <span>Configuracion</span>
-    </a>
-    #}
+            <nav class="sidebar-nav">
+                <!-- Dashboard -->
+                <a href="{{ url_for('routes.dashboard_admin') }}" class="nav-link" id="nav-dashboard">
+                    <i class="bi bi-speedometer2 text-lg"></i>
+                    <span>Centro de Control</span>
+                </a>
 
-    {% block navigation %}{% endblock %}
-        
+                <!-- Menu -->
+                <a href="{{ url_for('routes.admin_menu') }}" class="nav-link" id="nav-menu">
+                    <i class="bi bi-journal-text text-lg"></i>
+                    <span>Menu</span>
+                </a>
+
+                <!-- Ventas -->
+                <a href="{{ url_for('routes.ventas_dashboard') }}" class="nav-link" id="nav-ventas">
+                    <i class="bi bi-cash-stack text-lg"></i>
+                    <span>Ventas</span>
+                </a>
+
+                <!-- Reportes -->
+                <a href="{{ url_for('reports.index') }}" class="nav-link" id="nav-reportes">
+                    <i class="bi bi-graph-up text-lg"></i>
+                    <span>Reportes</span>
+                </a>
+
+                <!-- Analytics -->
+                {% if session.usuario_rol == '1' %}
+                <a href="{{ url_for('routes.analytics_index') }}" class="nav-link" id="nav-analytics">
+                    <i class="bi bi-bar-chart-line text-lg"></i>
+                    <span>Analytics</span>
+                </a>
+                {% endif %}
+
+                <!-- Configuracion -->
+                <a href="{{ url_for('routes.settings') }}" class="nav-link" id="nav-settings">
+                    <i class="bi bi-gear text-lg"></i>
+                    <span>Configuracion</span>
+                </a>
+
+                {% block navigation %}{% endblock %}
                 
                 <!--  ADMINISTRACION (Solo para Rol 1) -->
                 {% if session.usuario_rol == '1' %}

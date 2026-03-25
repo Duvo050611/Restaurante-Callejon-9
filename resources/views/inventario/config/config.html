@@ -1,4 +1,4 @@
-{% extends "layout/layout_base.html" %}
+{% extends "layout/layout_inventario.html" %}
 
 {% block title %}Configuración{% endblock %}
 
@@ -10,8 +10,30 @@
 </style>
 {% endblock %}
 
-{% block page_title %}Configuración de Cuenta{% endblock %}
+{% block page_title %}Configuración de Cuenta - Inventario{% endblock %}
 {% block page_subtitle %}Gestiona tu perfil y seguridad{% endblock %}
+
+{% block navigation %}
+<a href="{{ url_for('routes.dashboard_inventario') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-house-door text-lg"></i>
+    <span>Inicio</span>
+</a>
+
+<a href="{{ url_for('routes.inventario_insumos') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-box-seam text-lg"></i>
+    <span>Insumos</span>
+</a>
+
+<a href="{{ url_for('routes.inventario_proveedores') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-truck text-lg"></i>
+    <span>Proveedores</span>
+</a>
+
+<a href="{{ url_for('routes.settings_inventario') }}" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-lg transition">
+    <i class="bi bi-gear text-lg"></i>
+    <span>Configuración</span>
+</a>
+{% endblock %}
 
 {% block content %}
 <div class="max-w-4xl mx-auto">

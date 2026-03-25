@@ -205,11 +205,11 @@ class InventarioController:
     # ==========================================
     @staticmethod
     def reportes():
+        """Dashboard de reportes de inventario"""
         if "usuario_rol" not in session or str(session["usuario_rol"]) not in ["1", "4", "3"]:
             return redirect(url_for("routes.login"))
 
         try:
-            # -- Datos base --
             insumos = Insumo.obtener_todos({"activo": True})
             criticos = Insumo.obtener_stock_critico()
 
@@ -221,43 +221,12 @@ class InventarioController:
                 for i in insumos
             ), 2)
 
-            # -- Chart 1: Estado del stock (donut) --
             chart_estado = json.dumps({
                 "labels": ["Normal", "Crítico"],
                 "data": [total_normales, total_criticos],
                 "colors": ["#22c55e", "#ef4444"]
             })
 
-            # -- Chart 2: Insumos por categoría (barras) --
-            categorias_count = {}
-            for insumo in insumos:
-                cat = insumo.get("categoria", "otros")
-                categorias_count[cat] = categorias_count.get(cat, 0) + 1
-
-            chart_categorias = json.dumps({
-                "labels": list(categorias_count.keys()),
-                "data": list(categorias_count.values())
-            })
-
-            # -- Chart 3: Movimientos últimos 30 días por tipo (barras) --
-            fecha_inicio = datetime.now() - timedelta(days=30)
-            movimientos = MovimientoInventario.obtener_historial(
-                {"fecha_desde": fecha_inicio}, limit=500
-            )
-            tipos_count = {"entrada": 0, "salida": 0, "merma": 0, "ajuste": 0}
-            for mov in movimientos:
-                tipo = mov.get("tipo", "")
-                if tipo in tipos_count:
-                    tipos_count[tipo] += 1
-
-            chart_movimientos = json.dumps({
-                "labels": ["Entradas", "Salidas", "Mermas", "Ajustes"],
-                "data": [tipos_count["entrada"], tipos_count["salida"],
-                         tipos_count["merma"], tipos_count["ajuste"]],
-                "colors": ["#3b82f6", "#f97316", "#ef4444", "#a855f7"]
-            })
-
-            # -- Chart 4: Top 5 insumos por valor en inventario (barras horizontales) --
             top5 = sorted(
                 insumos,
                 key=lambda x: float(x.get("stock_actual", 0)) * float(x.get("costo_unitario", 0)),
@@ -272,25 +241,21 @@ class InventarioController:
             })
 
             return render_template(
-                "inventario/reportes.html",
+                "reports/inventario.html",
                 total_insumos=total_insumos,
                 total_criticos=total_criticos,
                 total_normales=total_normales,
                 valor_total=valor_total,
                 chart_estado=chart_estado,
-                chart_categorias=chart_categorias,
-                chart_movimientos=chart_movimientos,
                 chart_top_valor=chart_top_valor
             )
 
         except Exception as e:
-            logging.error(f"Error en reportes: {e}")
+            logging.error(f"Error en reportes inventario: {e}")
             return render_template(
-                "inventario/reportes.html",
+                "reports/inventario.html",
                 total_insumos=0, total_criticos=0,
                 total_normales=0, valor_total=0,
                 chart_estado=json.dumps({"labels": [], "data": [], "colors": []}),
-                chart_categorias=json.dumps({"labels": [], "data": []}),
-                chart_movimientos=json.dumps({"labels": [], "data": [], "colors": []}),
                 chart_top_valor=json.dumps({"labels": [], "data": []})
             )
