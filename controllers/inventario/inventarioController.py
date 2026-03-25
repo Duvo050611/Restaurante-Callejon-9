@@ -26,6 +26,9 @@ class InventarioController:
         if "usuario_rol" not in session or str(session["usuario_rol"]) not in ["1", "3", "4"]:
             return redirect(url_for("routes.login"))
 
+        if str(session["usuario_rol"]) == "3":
+            return redirect(url_for("routes.inventario_reportes"))
+
         try:
             total_insumos = len(Insumo.obtener_todos())
             insumos_criticos = Insumo.obtener_stock_critico()
