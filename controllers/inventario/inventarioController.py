@@ -23,7 +23,7 @@ class InventarioController:
     # ==========================================
     @staticmethod
     def dashboard():
-        if "usuario_rol" not in session or str(session["usuario_rol"]) != "4":
+        if "usuario_rol" not in session or str(session["usuario_rol"]) not in ["1", "3", "4"]:
             return redirect(url_for("routes.login"))
 
         try:
