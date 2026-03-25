@@ -307,7 +307,7 @@ class DashboardController:
         """Vista de reportes para administración"""
         if "usuario_rol" not in session or str(session["usuario_rol"]) != "1":
             return redirect(url_for("routes.login"))
-        return render_template("support/reportes/index.html")
+        return render_template("support/reportes/   index.html")
 
     @staticmethod
     def toggle_theme():
