@@ -9,6 +9,8 @@ from controllers.dashboard.dashboard_controller import DashboardController
 from controllers.admin.BackupController import BackupController
 from controllers.historial.historialController import HistorialController
 from controllers.inventario.inventarioController import InventarioController
+from models.inventario_model import Insumo
+from flask import render_template
 from controllers.dashboard.dashboardApiController import DashboardAPIController
 from controllers.comanda.comandaController import ComandaController
 from controllers.mesa.mesaController import MesaController
@@ -547,17 +549,6 @@ def cocina_listos():
     # Placeholder: implementar vista
     return render_template("cocina/listos.html")
 
-@routes_bp.route("/cocina/inventario")
-@login_required
-@rol_required(['3'])
-def cocina_inventario():
-    """Vista de consulta de inventario (solo lectura)"""
-    if "usuario_rol" not in session or str(session["usuario_rol"]) != "3":
-        return redirect(url_for("routes.login"))
-    
-    # Placeholder: implementar vista de inventario
-    return render_template("cocina/dashboard.html")
-
 
 # API: Obtener pedidos pendientes
 @routes_bp.route("/api/cocina/pedidos/pendientes", methods=["GET"])
@@ -620,47 +611,57 @@ def api_cocina_estadisticas():
 # ============================================
 
 # Dashboard
+@routes_bp.route("/cocina/inventario")
+@login_required
+@rol_required(['1', '3', '4'])
+def cocina_inventario():
+    return redirect(url_for('routes.dashboard_inventario'))
+
+# --- Gestión de Insumos ---//
+@routes_bp.route("/inventario/insumos")
+def inventario_insumos():
+    
+   
+    insumos = Insumo.obtener_todos()
+    return render_template(
+        "inventario/insumos.html",
+        insumos=insumos
+    )
+
 @routes_bp.route("/inventario/dashboard")
 @login_required
-@rol_required(['1', '4'])  # Admin e Inventario
+@rol_required(['1', '3', '4'])
 def dashboard_inventario():
-    return InventarioController.dashboard()
-
-# --- Gestión de Insumos ---
-@routes_bp.route("/inventario/insumos")
-@login_required
-@rol_required(['1', '4'])
-def inventario_insumos():
-    return InventarioController.lista_insumos()
+    return DashboardController.inventario()
 
 @routes_bp.route("/inventario/insumos/crear", methods=["GET", "POST"])
 @login_required
-@rol_required(['1', '4'])
+@rol_required(['1', '4', '3'])
 def inventario_crear_insumo():
     return InventarioController.crear_insumo()
 
 # --- Movimientos ---
 @routes_bp.route("/inventario/movimientos/entrada", methods=["GET", "POST"])
 @login_required
-@rol_required(['1', '4'])
+@rol_required(['1', '4', '3'])
 def inventario_registrar_entrada():
     return InventarioController.registrar_entrada()
 
 @routes_bp.route("/inventario/movimientos/salida", methods=["GET", "POST"])
 @login_required
-@rol_required(['1', '4'])
+@rol_required(['1', '4', '3'])
 def inventario_registrar_salida():
     return InventarioController.registrar_salida()
 
 @routes_bp.route("/inventario/movimientos/merma", methods=["GET", "POST"])
 @login_required
-@rol_required(['1', '4'])
+@rol_required(['1', '4', '3'])
 def inventario_registrar_merma():
     return InventarioController.registrar_merma()
 
-@routes_bp.route("/inventario/movimientos/historial")
+@routes_bp.route("/inventario/movimientos/historial") #/historial
 @login_required
-@rol_required(['1', '4'])
+@rol_required(['1', '4', '3'])
 def inventario_historial():
     return InventarioController.historial_movimientos()
 
@@ -673,27 +674,27 @@ def inventario_alertas():
 
 @routes_bp.route("/api/inventario/alertas/resolver", methods=["POST"])
 @login_required
-@rol_required(['1', '4'])
+@rol_required(['1', '4', '3'])
 def inventario_resolver_alerta():
     return InventarioController.resolver_alerta()
 
 # --- Proveedores ---
 @routes_bp.route("/inventario/proveedores")
 @login_required
-@rol_required(['1', '4'])
+@rol_required(['1', '4', '3'])
 def inventario_proveedores():
     return InventarioController.lista_proveedores()
 
 @routes_bp.route("/inventario/proveedores/crear", methods=["GET", "POST"])
 @login_required
-@rol_required(['1', '4'])
+@rol_required(['1', '4', '3'])
 def inventario_crear_proveedor():
     return InventarioController.crear_proveedor()
 
 # --- Reportes ---
 @routes_bp.route("/inventario/reportes")
 @login_required
-@rol_required(['1', '4'])
+@rol_required(['1', '4', '3'])
 def inventario_reportes():
     return InventarioController.reportes()
 

@@ -150,6 +150,46 @@
         </form>
     </div>
 
+    <!-- Tarjetas resumen de stock (datos en tiempo real) -->
+    <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-6">
+        <div class="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-blue-100 flex items-center justify-center">
+                <i class="bi bi-box-seam text-blue-600"></i>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500">Total Insumos</p>
+                <p class="text-xl font-bold text-gray-800">{{ total_insumos }}</p>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-green-100 flex items-center justify-center">
+                <i class="bi bi-check-circle text-green-600"></i>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500">Stock Normal</p>
+                <p class="text-xl font-bold text-green-600">{{ total_normales }}</p>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-red-100 flex items-center justify-center">
+                <i class="bi bi-exclamation-triangle text-red-600"></i>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500">Stock Crítico</p>
+                <p class="text-xl font-bold text-red-600">{{ total_criticos }}</p>
+            </div>
+        </div>
+        <div class="bg-white rounded-xl shadow-sm p-4 flex items-center gap-3">
+            <div class="w-10 h-10 rounded-full bg-purple-100 flex items-center justify-center">
+                <i class="bi bi-currency-dollar text-purple-600"></i>
+            </div>
+            <div>
+                <p class="text-xs text-gray-500">Valor Total</p>
+                <p class="text-xl font-bold text-purple-600">${{ "%.2f"|format(valor_total) }}</p>
+            </div>
+        </div>
+    </div>
+
     <!-- KPI Cards -->
     <div class="kpi-grid">
         <div class="kpi-card warning">
@@ -182,7 +222,21 @@
         </div>
     </div>
 
-    <!-- Charts -->
+    <!-- Charts fila 1: Estado stock + Top 5 valor (datos servidor) -->
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+        <div class="chart-card">
+            <h3><i class="bi bi-pie-chart text-blue-500"></i> Estado del Stock</h3>
+            <div class="flex justify-center">
+                <canvas id="estadoChart" style="max-height:240px;"></canvas>
+            </div>
+        </div>
+        <div class="chart-card">
+            <h3><i class="bi bi-trophy text-purple-500"></i> Top 5 por Valor en Inventario</h3>
+            <canvas id="topValorChart" style="max-height:240px;"></canvas>
+        </div>
+    </div>
+
+    <!-- Charts fila 2: Consumo y Merma (datos AJAX) -->
     <div class="charts-row">
         <div class="chart-card">
             <h3><i class="bi bi-bar-chart-line"></i> Consumo por Categoría</h3>
@@ -573,6 +627,62 @@ function exportReport(format, type) {
 function formatCurrency(value) {
     return new Intl.NumberFormat('es-MX', { style: 'currency', currency: 'MXN' }).format(value || 0);
 }
+
+// ── Gráficas con datos del servidor ─────────────────────────────────────────
+const _chartEstado   = {{ chart_estado | safe }};
+const _chartTopValor = {{ chart_top_valor | safe }};
+
+// Donut: Estado del stock
+new Chart(document.getElementById('estadoChart'), {
+    type: 'doughnut',
+    data: {
+        labels: _chartEstado.labels,
+        datasets: [{
+            data: _chartEstado.data,
+            backgroundColor: _chartEstado.colors,
+            borderWidth: 2,
+            borderColor: '#fff'
+        }]
+    },
+    options: {
+        responsive: true,
+        plugins: {
+            legend: { position: 'bottom' },
+            tooltip: {
+                callbacks: {
+                    label: ctx => ` ${ctx.label}: ${ctx.parsed} insumos`
+                }
+            }
+        }
+    }
+});
+
+// Horizontal bar: Top 5 por valor en inventario
+new Chart(document.getElementById('topValorChart'), {
+    type: 'bar',
+    data: {
+        labels: _chartTopValor.labels,
+        datasets: [{
+            label: 'Valor ($)',
+            data: _chartTopValor.data,
+            backgroundColor: '#a855f7cc',
+            borderColor: '#a855f7',
+            borderWidth: 1,
+            borderRadius: 6
+        }]
+    },
+    options: {
+        indexAxis: 'y',
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+            x: {
+                beginAtZero: true,
+                ticks: { callback: val => '$' + val.toFixed(2) }
+            }
+        }
+    }
+});
 </script>
 
 <style>

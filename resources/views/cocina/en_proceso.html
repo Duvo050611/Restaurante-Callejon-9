@@ -1,4 +1,4 @@
-{% extends "layout/layout_base.html" %}
+{% extends "layout/layout_cocina.html" %}
 
 {% block title %}Pedidos en Preparación - Sistema de Cocina{% endblock %}
 {% block page_title %}Pedidos en Preparación{% endblock %}
@@ -85,7 +85,6 @@
     <!-- COLUMNA PRINCIPAL: TARJETAS DE PEDIDOS -->
     <div class="lg:col-span-3">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4" id="contenedor-preparacion">
-            <!-- Los pedidos se cargan dinámicamente aquí -->
             <div class="col-span-2 text-center py-16 bg-white rounded-xl shadow-md">
                 <i class="bi bi-inbox text-6xl mb-3 block text-gray-300"></i>
                 <p class="text-lg font-semibold text-gray-500">Cargando pedidos...</p>
@@ -104,9 +103,7 @@
                 <span><i class="bi bi-list-check"></i> Orden de Preparación</span>
                 <span class="text-sm bg-orange-100 text-orange-700 px-2 py-1 rounded-full" id="total-lista-rapida">0</span>
             </h3>
-            <div id="listado-rapido-prep" class="space-y-2">
-                <!-- Lista dinámica -->
-            </div>
+            <div id="listado-rapido-prep" class="space-y-2"></div>
         </div>
         
         <!-- TIEMPOS ESTIMADOS -->
@@ -142,12 +139,8 @@
                 <div>
                     <h2 class="text-2xl font-bold" id="modal-prep-folio">Pedido #000000</h2>
                     <div class="flex items-center gap-4 mt-2">
-                        <p class="text-sm opacity-90">
-                            <i class="bi bi-table"></i> Mesa <span id="modal-prep-mesa">1</span>
-                        </p>
-                        <p class="text-sm opacity-90">
-                            <i class="bi bi-person"></i> Mesero: <span id="modal-prep-mesero">--</span>
-                        </p>
+                        <p class="text-sm opacity-90"><i class="bi bi-table"></i> Mesa <span id="modal-prep-mesa">1</span></p>
+                        <p class="text-sm opacity-90"><i class="bi bi-person"></i> Mesero: <span id="modal-prep-mesero">--</span></p>
                     </div>
                 </div>
                 <button onclick="cerrarModalDetallesPrep()" class="text-2xl hover:bg-white hover:bg-opacity-20 rounded-lg p-2 transition">
@@ -158,8 +151,6 @@
         
         <!-- Modal Body -->
         <div class="p-6">
-            
-            <!-- Info de Tiempos -->
             <div class="grid grid-cols-2 gap-4 mb-6">
                 <div class="bg-orange-50 p-4 rounded-lg border-l-4 border-orange-500">
                     <p class="text-xs text-gray-600 uppercase font-bold">TIEMPO EN PREPARACIÓN</p>
@@ -173,24 +164,19 @@
                 </div>
             </div>
             
-            <!-- Platillos con Estados Individuales -->
             <div class="mb-6">
                 <h3 class="font-bold text-lg mb-4 text-gray-800 pb-2 border-b-2 border-orange-300 flex items-center gap-2">
                     <i class="bi bi-basket"></i> Platillos en Preparación
                 </h3>
-                <div id="modal-prep-platillos" class="space-y-4">
-                    <!-- Los platillos se cargan dinámicamente -->
-                </div>
+                <div id="modal-prep-platillos" class="space-y-4"></div>
             </div>
             
-            <!-- Notas Adicionales -->
             <div id="modal-prep-notas-container" class="bg-yellow-50 p-4 rounded-lg hidden">
                 <h4 class="font-semibold text-sm text-yellow-800 mb-2 flex items-center gap-2">
                     <i class="bi bi-pencil-square"></i> Notas del pedido:
                 </h4>
                 <p id="modal-prep-notas" class="text-sm text-yellow-700"></p>
             </div>
-            
         </div>
         
         <!-- Modal Footer -->
@@ -202,193 +188,122 @@
                 <i class="bi bi-check-circle"></i> Marcar Todo Listo
             </button>
         </div>
-        
     </div>
 </div>
 
 {% endblock %}
 
+{% block extra_css %}
+{{ super() }}
+<style>
+.animate-slideIn {
+    animation: slideIn 0.3s ease-out;
+}
+@keyframes slideIn {
+    from { transform: translateY(-20px); opacity: 0; }
+    to   { transform: translateY(0);     opacity: 1; }
+}
+.max-h-24::-webkit-scrollbar       { width: 4px; }
+.max-h-24::-webkit-scrollbar-track { background: #f1f1f1; border-radius: 4px; }
+.max-h-24::-webkit-scrollbar-thumb { background: #ff9800; border-radius: 4px; }
+.max-h-24::-webkit-scrollbar-thumb:hover { background: #f57c00; }
+</style>
+{% endblock %}
+
 {% block extra_js %}
 <script src="https://cdn.socket.io/4.5.4/socket.io.min.js"></script>
 <script>
-// ============================================
-// VARIABLES GLOBALES
-// ============================================
 let pedidosPreparacion = [];
 let socket = null;
 let pedidoSeleccionado = null;
 
-// ============================================
-// INICIALIZACIÓN
-// ============================================
 document.addEventListener('DOMContentLoaded', function() {
-    console.log('🔥 Vista En Preparación inicializada (MongoDB)');
-    
-    // Cargar pedidos iniciales
     cargarPedidosPreparacion();
-    
-    // Inicializar Socket.IO
     inicializarSocketCocina();
-    
-    // Actualizar cada 15 segundos
-    setInterval(() => {
-        cargarPedidosPreparacion();
-    }, 15000);
+    setInterval(() => cargarPedidosPreparacion(), 15000);
 });
 
-// ============================================
-// SOCKET.IO CONFIGURACIÓN
-// ============================================
 function inicializarSocketCocina() {
     try {
-        socket = io({
-            transports: ['websocket'],
-            upgrade: false,
-            reconnection: true,
-            reconnectionAttempts: 5,
-            reconnectionDelay: 1000
-        });
-        
+        socket = io({ transports: ['websocket'], upgrade: false, reconnection: true, reconnectionAttempts: 5, reconnectionDelay: 1000 });
         socket.on('connect', function() {
             console.log('✅ Socket.IO conectado en vista Preparación');
             socket.emit('join_room', 'cocina');
         });
-        
-        socket.on('preparacion_iniciada', function(data) {
-            console.log('🔄 Nuevo pedido en preparación:', data);
-            cargarPedidosPreparacion();
-            mostrarNotificacion('Nuevo pedido en preparación', 'info');
-        });
-        
-        socket.on('pedido_listo_confirmado', function(data) {
-            console.log('✅ Pedido marcado como listo:', data);
-            cargarPedidosPreparacion();
-        });
-        
-        socket.on('pedido_actualizado', function(data) {
-            console.log('📦 Pedido actualizado:', data);
-            cargarPedidosPreparacion();
-        });
-        
-        socket.on('disconnect', function() {
-            console.log('❌ Socket.IO desconectado');
-        });
-        
+        socket.on('preparacion_iniciada', function(data) { cargarPedidosPreparacion(); mostrarNotificacion('Nuevo pedido en preparación', 'info'); });
+        socket.on('pedido_listo_confirmado', function(data) { cargarPedidosPreparacion(); });
+        socket.on('pedido_actualizado', function(data) { cargarPedidosPreparacion(); });
+        socket.on('disconnect', function() { console.log('❌ Socket.IO desconectado'); });
     } catch (error) {
         console.error('Error al conectar Socket.IO:', error);
     }
 }
 
-// ============================================
-// CARGA DE PEDIDOS DESDE MONGODB
-// ============================================
 async function cargarPedidosPreparacion() {
     try {
         const response = await fetch('/api/cocina/pedidos/en-proceso');
         const data = await response.json();
-        
         if (data.success) {
             pedidosPreparacion = data.pedidos || [];
             renderizarPedidosPreparacion();
             renderizarListadoRapido();
             actualizarEstadisticas();
         } else {
-            console.error('Error al cargar pedidos:', data.error);
             mostrarError('Error al cargar los pedidos');
         }
     } catch (error) {
-        console.error('Error de conexión:', error);
         mostrarError('Error de conexión con el servidor');
     }
 }
 
-// ============================================
-// RENDERIZADO DE PEDIDOS
-// ============================================
 function renderizarPedidosPreparacion() {
     const contenedor = document.getElementById('contenedor-preparacion');
-    
     if (!pedidosPreparacion || pedidosPreparacion.length === 0) {
         contenedor.innerHTML = `
             <div class="col-span-2 text-center py-16 bg-white rounded-xl shadow-md">
                 <i class="bi bi-inbox text-6xl mb-3 block text-gray-300"></i>
                 <p class="text-lg font-semibold text-gray-500">No hay pedidos en preparación</p>
                 <p class="text-sm text-gray-400 mt-1">Los pedidos aparecerán aquí cuando inicies su preparación</p>
-            </div>
-        `;
+            </div>`;
         return;
     }
-    
-    let html = '';
-    pedidosPreparacion.forEach(pedido => {
-        html += crearTarjetaPedidoPreparacion(pedido);
-    });
-    
-    contenedor.innerHTML = html;
+    contenedor.innerHTML = pedidosPreparacion.map(p => crearTarjetaPedidoPreparacion(p)).join('');
 }
 
 function crearTarjetaPedidoPreparacion(pedido) {
-    const tiempoPrep = pedido.tiempo_preparacion || 0;
+    const tiempoPrep  = pedido.tiempo_preparacion || 0;
     const tiempoTotal = pedido.tiempo_espera || 0;
-    
-    // Determinar color basado en tiempo
-    let colorClase = 'border-orange-500';
-    let badgeColor = 'bg-orange-100 text-orange-700';
-    let icono = 'bi-fire';
-    
-    if (tiempoTotal > 15) {
-        colorClase = 'border-red-500';
-        badgeColor = 'bg-red-100 text-red-700';
-        icono = 'bi-exclamation-triangle-fill';
-    } else if (tiempoTotal > 10) {
-        colorClase = 'border-yellow-500';
-        badgeColor = 'bg-yellow-100 text-yellow-700';
-        icono = 'bi-clock';
-    }
-    
-    // Contar items en preparación vs listos
+    let colorClase = 'border-orange-500', badgeColor = 'bg-orange-100 text-orange-700', icono = 'bi-fire';
+    if (tiempoTotal > 15)      { colorClase = 'border-red-500';    badgeColor = 'bg-red-100 text-red-700';       icono = 'bi-exclamation-triangle-fill'; }
+    else if (tiempoTotal > 10) { colorClase = 'border-yellow-500'; badgeColor = 'bg-yellow-100 text-yellow-700'; icono = 'bi-clock'; }
     const items = pedido.items || [];
-    const itemsPreparados = items.filter(item => item.estado_cocina === 'listo').length;
-    const totalItems = items.length;
-    const progreso = totalItems > 0 ? (itemsPreparados / totalItems * 100) : 0;
-    
+    const itemsPreparados = items.filter(i => i.estado_cocina === 'listo').length;
+    const progreso = items.length > 0 ? (itemsPreparados / items.length * 100) : 0;
     return `
         <div class="bg-white rounded-xl shadow-md hover:shadow-lg transition border-l-4 ${colorClase} overflow-hidden">
             <div class="p-5">
-                <!-- Cabecera -->
                 <div class="flex items-start justify-between mb-3">
-                    <div>
-                        <div class="flex items-center gap-2">
-                            <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
-                                <i class="bi ${icono} text-orange-600 text-xl"></i>
-                            </div>
-                            <div>
-                                <h3 class="font-bold text-gray-800">Mesa ${pedido.mesa_numero}</h3>
-                                <p class="text-xs text-gray-500">${pedido.folio || 'Sin folio'}</p>
-                                <p class="text-xs text-gray-500">Mesero: ${pedido.mesero_nombre || 'N/A'}</p>
-                            </div>
+                    <div class="flex items-center gap-2">
+                        <div class="w-10 h-10 bg-orange-100 rounded-full flex items-center justify-center">
+                            <i class="bi ${icono} text-orange-600 text-xl"></i>
+                        </div>
+                        <div>
+                            <h3 class="font-bold text-gray-800">Mesa ${pedido.mesa_numero}</h3>
+                            <p class="text-xs text-gray-500">${pedido.folio || 'Sin folio'}</p>
+                            <p class="text-xs text-gray-500">Mesero: ${pedido.mesero_nombre || 'N/A'}</p>
                         </div>
                     </div>
-                    <div class="text-right">
-                        <span class="px-3 py-1 ${badgeColor} rounded-full text-xs font-bold">
-                            ${tiempoPrep} min
-                        </span>
-                    </div>
+                    <span class="px-3 py-1 ${badgeColor} rounded-full text-xs font-bold">${tiempoPrep} min</span>
                 </div>
-                
-                <!-- Barra de progreso -->
                 <div class="mb-3">
                     <div class="flex justify-between text-xs mb-1">
                         <span class="text-gray-600">Progreso</span>
-                        <span class="font-bold text-orange-600">${itemsPreparados}/${totalItems}</span>
+                        <span class="font-bold text-orange-600">${itemsPreparados}/${items.length}</span>
                     </div>
                     <div class="w-full bg-gray-200 rounded-full h-2">
-                        <div class="bg-gradient-to-r from-orange-500 to-orange-600 h-2 rounded-full transition-all duration-500" 
-                             style="width: ${progreso}%"></div>
+                        <div class="bg-gradient-to-r from-orange-500 to-orange-600 h-2 rounded-full transition-all duration-500" style="width: ${progreso}%"></div>
                     </div>
                 </div>
-                
-                <!-- Items -->
                 <div class="space-y-2 mb-4 max-h-24 overflow-y-auto">
                     ${items.map(item => `
                         <div class="flex items-center justify-between text-sm">
@@ -402,114 +317,65 @@ function crearTarjetaPedidoPreparacion(pedido) {
                         </div>
                     `).join('') || '<p class="text-gray-400 text-sm">Sin items</p>'}
                 </div>
-                
-                <!-- Acciones -->
                 <div class="flex gap-2">
-                    <button onclick="verDetallesPreparacion('${pedido._id}')" 
-                            class="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold text-sm flex items-center justify-center gap-1">
+                    <button onclick="verDetallesPreparacion('${pedido._id}')" class="flex-1 px-3 py-2 bg-blue-100 text-blue-700 rounded-lg hover:bg-blue-200 transition font-semibold text-sm flex items-center justify-center gap-1">
                         <i class="bi bi-eye"></i> Detalles
                     </button>
-                    <button onclick="marcarListo('${pedido._id}')" 
-                            class="flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-semibold text-sm flex items-center justify-center gap-1">
+                    <button onclick="marcarListo('${pedido._id}')" class="flex-1 px-3 py-2 bg-green-500 text-white rounded-lg hover:bg-green-600 transition font-semibold text-sm flex items-center justify-center gap-1">
                         <i class="bi bi-check-circle"></i> Listo
                     </button>
                 </div>
             </div>
-        </div>
-    `;
+        </div>`;
 }
 
 function renderizarListadoRapido() {
     const listado = document.getElementById('listado-rapido-prep');
-    
     if (!pedidosPreparacion || pedidosPreparacion.length === 0) {
         listado.innerHTML = '<p class="text-sm text-gray-500 text-center py-4">Sin pedidos en preparación</p>';
         return;
     }
-    
-    // Ordenar por tiempo de preparación (más antiguos primero)
-    const pedidosOrdenados = [...pedidosPreparacion].sort((a, b) => 
-        (b.tiempo_preparacion || 0) - (a.tiempo_preparacion || 0)
-    );
-    
-    let html = '';
-    pedidosOrdenados.forEach((pedido, index) => {
-        html += `
-            <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer" 
-                 onclick="verDetallesPreparacion('${pedido._id}')">
+    listado.innerHTML = [...pedidosPreparacion]
+        .sort((a, b) => (b.tiempo_preparacion || 0) - (a.tiempo_preparacion || 0))
+        .map((pedido, index) => `
+            <div class="flex items-center justify-between p-2 hover:bg-gray-50 rounded-lg cursor-pointer" onclick="verDetallesPreparacion('${pedido._id}')">
                 <div class="flex items-center gap-2">
                     <span class="text-xs font-bold text-gray-500">#${index + 1}</span>
                     <span class="font-medium">Mesa ${pedido.mesa_numero}</span>
                 </div>
-                <span class="text-xs ${pedido.tiempo_preparacion > 15 ? 'text-red-600 font-bold' : 'text-gray-600'}">
-                    ${pedido.tiempo_preparacion || 0} min
-                </span>
-            </div>
-        `;
-    });
-    
-    listado.innerHTML = html;
+                <span class="text-xs ${pedido.tiempo_preparacion > 15 ? 'text-red-600 font-bold' : 'text-gray-600'}">${pedido.tiempo_preparacion || 0} min</span>
+            </div>`).join('');
 }
 
-// ============================================
-// MODAL DE DETALLES
-// ============================================
 async function verDetallesPreparacion(pedidoId) {
     try {
-        // Buscar el pedido en los datos actuales
         pedidoSeleccionado = pedidosPreparacion.find(p => p._id === pedidoId);
-        
         if (!pedidoSeleccionado) {
-            // Si no está en caché, cargarlo directamente
             const response = await fetch(`/api/cocina/pedido/${pedidoId}`);
             const data = await response.json();
-            if (data.success) {
-                pedidoSeleccionado = data.pedido;
-            }
+            if (data.success) pedidoSeleccionado = data.pedido;
         }
-        
         if (pedidoSeleccionado) {
             llenarModalDetalles(pedidoSeleccionado);
             document.getElementById('modal-detalles-prep').classList.remove('hidden');
         }
-        
     } catch (error) {
-        console.error('Error al cargar detalles:', error);
         mostrarError('No se pudieron cargar los detalles del pedido');
     }
 }
 
 function llenarModalDetalles(pedido) {
-    document.getElementById('modal-prep-folio').textContent = pedido.folio || `Pedido #${pedido._id.slice(-6)}`;
-    document.getElementById('modal-prep-mesa').textContent = pedido.mesa_numero || 'N/A';
-    document.getElementById('modal-prep-mesero').textContent = pedido.mesero_nombre || 'No asignado';
+    document.getElementById('modal-prep-folio').textContent        = pedido.folio || `Pedido #${pedido._id.slice(-6)}`;
+    document.getElementById('modal-prep-mesa').textContent         = pedido.mesa_numero || 'N/A';
+    document.getElementById('modal-prep-mesero').textContent       = pedido.mesero_nombre || 'No asignado';
     document.getElementById('modal-prep-tiempo-actual').textContent = `${pedido.tiempo_preparacion || 0} minutos`;
-    document.getElementById('modal-prep-tiempo-total').textContent = `${pedido.tiempo_espera || 0} minutos`;
-    
-    // Renderizar platillos
+    document.getElementById('modal-prep-tiempo-total').textContent  = `${pedido.tiempo_espera || 0} minutos`;
     const contenedorPlatillos = document.getElementById('modal-prep-platillos');
     if (pedido.items && pedido.items.length > 0) {
-        let html = '';
-        pedido.items.forEach(item => {
-            // Determinar clase de estado
-            let estadoClase = '';
-            let estadoTexto = '';
-            
-            switch(item.estado_cocina) {
-                case 'listo':
-                    estadoClase = 'bg-green-100 text-green-700';
-                    estadoTexto = 'Listo';
-                    break;
-                case 'en_preparacion':
-                    estadoClase = 'bg-orange-100 text-orange-700';
-                    estadoTexto = 'Preparando';
-                    break;
-                default:
-                    estadoClase = 'bg-gray-100 text-gray-700';
-                    estadoTexto = 'Pendiente';
-            }
-            
-            html += `
+        contenedorPlatillos.innerHTML = pedido.items.map(item => {
+            const estadoMap = { listo: ['bg-green-100 text-green-700', 'Listo'], en_preparacion: ['bg-orange-100 text-orange-700', 'Preparando'] };
+            const [estadoClase, estadoTexto] = estadoMap[item.estado_cocina] || ['bg-gray-100 text-gray-700', 'Pendiente'];
+            return `
                 <div class="flex items-center justify-between p-3 bg-gray-50 rounded-lg">
                     <div class="flex items-start gap-3 flex-1">
                         <div class="w-8 h-8 bg-orange-100 rounded-full flex items-center justify-center flex-shrink-0">
@@ -518,33 +384,27 @@ function llenarModalDetalles(pedido) {
                         <div class="flex-1">
                             <div class="flex items-center justify-between">
                                 <span class="font-semibold text-gray-800">${item.cantidad}x ${item.nombre}</span>
-                                <span class="px-2 py-1 text-xs rounded-full ${estadoClase}">
-                                    ${estadoTexto}
-                                </span>
+                                <span class="px-2 py-1 text-xs rounded-full ${estadoClase}">${estadoTexto}</span>
                             </div>
                             ${item.notas ? `<p class="text-xs text-gray-500 mt-1">📝 ${item.notas}</p>` : ''}
                             ${item.estado_cocina === 'en_preparacion' ? `
-                                <button onclick="marcarItemListo('${pedido._id}', '${item.producto_id}')" 
+                                <button onclick="marcarItemListo('${pedido._id}', '${item.producto_id}')"
                                         class="mt-2 text-xs bg-green-500 text-white px-3 py-1 rounded-lg hover:bg-green-600 transition">
                                     <i class="bi bi-check-circle"></i> Marcar como listo
-                                </button>
-                            ` : ''}
+                                </button>` : ''}
                         </div>
                     </div>
-                </div>
-            `;
-        });
-        contenedorPlatillos.innerHTML = html;
+                </div>`;
+        }).join('');
     } else {
         contenedorPlatillos.innerHTML = '<p class="text-gray-400 text-center py-4">No hay platillos en este pedido</p>';
     }
-    
-    // Notas generales
+    const notasContainer = document.getElementById('modal-prep-notas-container');
     if (pedido.notas) {
-        document.getElementById('modal-prep-notas-container').classList.remove('hidden');
+        notasContainer.classList.remove('hidden');
         document.getElementById('modal-prep-notas').textContent = pedido.notas;
     } else {
-        document.getElementById('modal-prep-notas-container').classList.add('hidden');
+        notasContainer.classList.add('hidden');
     }
 }
 
@@ -553,202 +413,67 @@ function cerrarModalDetallesPrep() {
     pedidoSeleccionado = null;
 }
 
-// ============================================
-// ACCIONES DE PEDIDOS (MongoDB)
-// ============================================
 async function marcarListo(comandaId) {
     try {
-        const response = await fetch('/api/cocina/pedido/listo', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                comanda_id: comandaId
-            })
-        });
-        
+        const response = await fetch('/api/cocina/pedido/listo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comanda_id: comandaId }) });
         const data = await response.json();
-        
-        if (data.success) {
-            mostrarNotificacion('✅ Pedido marcado como listo', 'success');
-            cargarPedidosPreparacion();
-            cerrarModalDetallesPrep();
-        } else {
-            mostrarError('Error al marcar pedido como listo');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarError('Error de conexión');
-    }
+        if (data.success) { mostrarNotificacion('✅ Pedido marcado como listo', 'success'); cargarPedidosPreparacion(); cerrarModalDetallesPrep(); }
+        else { mostrarError('Error al marcar pedido como listo'); }
+    } catch (error) { mostrarError('Error de conexión'); }
 }
 
 async function marcarItemListo(comandaId, productoId) {
     try {
-        const response = await fetch('/api/cocina/item/listo', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
-            body: JSON.stringify({
-                comanda_id: comandaId,
-                producto_id: productoId
-            })
-        });
-        
+        const response = await fetch('/api/cocina/item/listo', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ comanda_id: comandaId, producto_id: productoId }) });
         const data = await response.json();
-        
-        if (data.success) {
-            mostrarNotificacion('✅ Item marcado como listo', 'success');
-            // Recargar detalles del pedido actual
-            if (pedidoSeleccionado) {
-                verDetallesPreparacion(pedidoSeleccionado._id);
-            }
-            cargarPedidosPreparacion();
-        } else {
-            mostrarError('Error al marcar item como listo');
-        }
-    } catch (error) {
-        console.error('Error:', error);
-        mostrarError('Error de conexión');
-    }
+        if (data.success) { mostrarNotificacion('✅ Item marcado como listo', 'success'); if (pedidoSeleccionado) verDetallesPreparacion(pedidoSeleccionado._id); cargarPedidosPreparacion(); }
+        else { mostrarError('Error al marcar item como listo'); }
+    } catch (error) { mostrarError('Error de conexión'); }
 }
 
-async function marcarTodoListoDesdeModal() {
-    if (pedidoSeleccionado) {
-        await marcarListo(pedidoSeleccionado._id);
-    }
-}
+async function marcarTodoListoDesdeModal() { if (pedidoSeleccionado) await marcarListo(pedidoSeleccionado._id); }
 
-// ============================================
-// FILTROS Y ESTADÍSTICAS
-// ============================================
 function filtrarPorTiempo() {
     const filtro = document.getElementById('filtro-tiempo').value;
-    const tarjetas = document.querySelectorAll('#contenedor-preparacion > div[class*="bg-white"]');
-    
-    tarjetas.forEach(tarjeta => {
+    document.querySelectorAll('#contenedor-preparacion > div').forEach(tarjeta => {
         const badge = tarjeta.querySelector('.rounded-full.text-xs.font-bold');
-        if (badge) {
-            const tiempo = parseInt(badge.textContent);
-            switch(filtro) {
-                case 'urgente':
-                    tarjeta.style.display = tiempo > 15 ? 'block' : 'none';
-                    break;
-                case 'advertencia':
-                    tarjeta.style.display = tiempo > 10 && tiempo <= 15 ? 'block' : 'none';
-                    break;
-                case 'normal':
-                    tarjeta.style.display = tiempo <= 10 ? 'block' : 'none';
-                    break;
-                default:
-                    tarjeta.style.display = 'block';
-            }
-        }
+        if (!badge) return;
+        const tiempo = parseInt(badge.textContent);
+        const mostrar = filtro === 'urgente' ? tiempo > 15 : filtro === 'advertencia' ? tiempo > 10 && tiempo <= 15 : filtro === 'normal' ? tiempo <= 10 : true;
+        tarjeta.style.display = mostrar ? 'block' : 'none';
     });
 }
 
 function actualizarEstadisticas() {
     const total = pedidosPreparacion.length;
-    document.getElementById('total-preparacion').textContent = total;
+    document.getElementById('total-preparacion').textContent      = total;
     document.getElementById('total-preparando-detalle').textContent = total;
-    document.getElementById('total-lista-rapida').textContent = total;
-    
-    // Contar urgentes y advertencias
-    const urgentes = pedidosPreparacion.filter(p => p.tiempo_preparacion > 15).length;
-    const advertencias = pedidosPreparacion.filter(p => p.tiempo_preparacion > 10 && p.tiempo_preparacion <= 15).length;
-    
-    document.getElementById('contador-urgente').textContent = urgentes;
-    document.getElementById('contador-advertencia').textContent = advertencias;
-    
-    // Tiempo promedio
-    if (pedidosPreparacion.length > 0) {
+    document.getElementById('total-lista-rapida').textContent     = total;
+    document.getElementById('contador-urgente').textContent       = pedidosPreparacion.filter(p => p.tiempo_preparacion > 15).length;
+    document.getElementById('contador-advertencia').textContent   = pedidosPreparacion.filter(p => p.tiempo_preparacion > 10 && p.tiempo_preparacion <= 15).length;
+    if (total > 0) {
         const totalTiempo = pedidosPreparacion.reduce((acc, p) => acc + (p.tiempo_preparacion || 0), 0);
-        const promedio = (totalTiempo / pedidosPreparacion.length).toFixed(1);
-        document.getElementById('tiempo-promedio-prep').textContent = promedio;
-        document.getElementById('tiempo-promedio-detalle').textContent = `${promedio} min`;
-        
-        // Tiempo más antiguo
-        const maxTiempo = Math.max(...pedidosPreparacion.map(p => p.tiempo_preparacion || 0));
-        document.getElementById('tiempo-mas-antiguo').textContent = `${maxTiempo} min`;
+        const promedio    = (totalTiempo / total).toFixed(1);
+        const maxTiempo   = Math.max(...pedidosPreparacion.map(p => p.tiempo_preparacion || 0));
+        document.getElementById('tiempo-promedio-prep').textContent     = promedio;
+        document.getElementById('tiempo-promedio-detalle').textContent  = `${promedio} min`;
+        document.getElementById('tiempo-mas-antiguo').textContent       = `${maxTiempo} min`;
     }
 }
 
-function actualizarPedidosPrep() {
-    cargarPedidosPreparacion();
-    mostrarNotificacion('Pedidos actualizados', 'info');
-}
+function actualizarPedidosPrep() { cargarPedidosPreparacion(); mostrarNotificacion('Pedidos actualizados', 'info'); }
 
-// ============================================
-// NOTIFICACIONES
-// ============================================
 function mostrarNotificacion(mensaje, tipo = 'info') {
-    if (typeof Swal !== 'undefined') {
-        Swal.fire({
-            icon: tipo,
-            title: mensaje,
-            toast: true,
-            position: 'top-end',
-            showConfirmButton: false,
-            timer: 3000,
-            timerProgressBar: true
-        });
-    } else {
-        alert(mensaje);
-    }
+    Swal.fire({ icon: tipo, title: mensaje, toast: true, position: 'top-end', showConfirmButton: false, timer: 3000, timerProgressBar: true });
 }
+function mostrarError(mensaje) { mostrarNotificacion(mensaje, 'error'); }
 
-function mostrarError(mensaje) {
-    mostrarNotificacion(mensaje, 'error');
-}
-
-// ============================================
-// EXPORTAR FUNCIONES GLOBALES
-// ============================================
-window.verDetallesPreparacion = verDetallesPreparacion;
-window.cerrarModalDetallesPrep = cerrarModalDetallesPrep;
-window.marcarListo = marcarListo;
-window.marcarItemListo = marcarItemListo;
+window.verDetallesPreparacion   = verDetallesPreparacion;
+window.cerrarModalDetallesPrep  = cerrarModalDetallesPrep;
+window.marcarListo              = marcarListo;
+window.marcarItemListo          = marcarItemListo;
 window.marcarTodoListoDesdeModal = marcarTodoListoDesdeModal;
-window.actualizarPedidosPrep = actualizarPedidosPrep;
-window.filtrarPorTiempo = filtrarPorTiempo;
+window.actualizarPedidosPrep    = actualizarPedidosPrep;
+window.filtrarPorTiempo         = filtrarPorTiempo;
 </script>
-{% endblock %}
-
-{% block extra_css %}
-<style>
-.animate-slideIn {
-    animation: slideIn 0.3s ease-out;
-}
-
-@keyframes slideIn {
-    from {
-        transform: translateY(-20px);
-        opacity: 0;
-    }
-    to {
-        transform: translateY(0);
-        opacity: 1;
-    }
-}
-
-/* Scroll personalizado */
-.max-h-24::-webkit-scrollbar {
-    width: 4px;
-}
-
-.max-h-24::-webkit-scrollbar-track {
-    background: #f1f1f1;
-    border-radius: 4px;
-}
-
-.max-h-24::-webkit-scrollbar-thumb {
-    background: #ff9800;
-    border-radius: 4px;
-}
-
-.max-h-24::-webkit-scrollbar-thumb:hover {
-    background: #f57c00;
-}
-</style>
 {% endblock %}
