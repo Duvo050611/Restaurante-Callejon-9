@@ -40,6 +40,10 @@ document.addEventListener('DOMContentLoaded', function() {
     <i class="bi bi-clock-history text-lg"></i>
     <span>Historial</span>
 </a>
+<a href="{{ url_for('routes.mesero_kmeans') }}" class="nav-link">
+    <i class="bi bi-diagram-3 text-lg"></i>
+    <span>Segmentación</span>
+</a>
 {% endblock %}
 
 
@@ -49,17 +53,19 @@ document.addEventListener('DOMContentLoaded', function() {
 <div class="bg-white p-4 rounded-xl shadow-md mb-6">
     <div class="grid grid-cols-1 md:grid-cols-3 gap-4 items-end">
         <div>
-            <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Fecha</label>
+            <label class="text-[10px] font-bold text-gray-400 uppercase mb-1 block">Período</label>
             <div class="flex items-center gap-2">
-                <input type="date" id="filtro-fecha" class="flex-1 border-gray-200 rounded-lg text-sm px-3 py-2">
+                <input type="date" id="filtro-inicio" class="flex-1 border-gray-200 rounded-lg text-sm px-3 py-2">
+                <span class="text-gray-400 text-xs">–</span>
+                <input type="date" id="filtro-fin" class="flex-1 border-gray-200 rounded-lg text-sm px-3 py-2">
                 <button onclick="cargarHistorial()"
                         class="bg-[#F2913D] hover:bg-[#F2A339] text-white px-4 py-2 rounded-lg transition">
                     <i class="bi bi-search"></i>
                 </button>
                 <button onclick="resetFecha()"
                         class="bg-gray-100 hover:bg-gray-200 text-gray-600 px-4 py-2 rounded-lg transition"
-                        title="Hoy">
-                    <i class="bi bi-calendar-check"></i>
+                        title="Últimos 30 días">
+                    <i class="bi bi-calendar-range"></i>
                 </button>
             </div>
         </div>
@@ -123,7 +129,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="flex items-center justify-between mb-4">
                 <h4 class="font-bold text-gray-700 flex items-center gap-2">
                     <i class="bi bi-graph-up text-[#F2913D]"></i>
-                    Ventas por Hora
+                    Ventas por Día
                 </h4>
                 <span class="text-[10px] font-bold text-gray-400 uppercase bg-gray-50 px-2 py-1 rounded">Línea</span>
             </div>
@@ -186,7 +192,7 @@ document.addEventListener('DOMContentLoaded', function() {
             <div class="flex items-center justify-between mb-4">
                 <h4 class="font-bold text-gray-700 flex items-center gap-2">
                     <i class="bi bi-cash-coin text-[#F2913D]"></i>
-                    Propinas Acumuladas
+                    Propinas por Día
                 </h4>
                 <span class="text-[10px] font-bold text-gray-400 uppercase bg-gray-50 px-2 py-1 rounded">Barras</span>
             </div>
@@ -242,18 +248,17 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 function resetFecha() {
-    const inputFecha = document.getElementById('filtro-fecha');
     const hoy = new Date();
-    const year = hoy.getFullYear();
-    const month = String(hoy.getMonth() + 1).padStart(2, '0');
-    const day = String(hoy.getDate()).padStart(2, '0');
-    inputFecha.value = `${year}-${month}-${day}`;
-    document.getElementById('fecha-seleccionada').textContent =
-        hoy.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const fmt = d => d.toISOString().split('T')[0];
+    const hace30 = new Date(hoy); hace30.setDate(hoy.getDate() - 30);
+    document.getElementById('filtro-inicio').value = fmt(hace30);
+    document.getElementById('filtro-fin').value = fmt(hoy);
+    document.getElementById('fecha-seleccionada').textContent = 'Últimos 30 días';
 }
 
 async function cargarHistorial() {
-    const fecha = document.getElementById('filtro-fecha').value;
+    const inicio = document.getElementById('filtro-inicio').value;
+    const fin    = document.getElementById('filtro-fin').value;
     const contenedor = document.getElementById('contenedor-historial');
 
     contenedor.innerHTML = `
@@ -263,15 +268,13 @@ async function cargarHistorial() {
         </div>
     `;
 
-    // Actualizar label de fecha
-    const fechaObj = new Date(fecha + 'T12:00:00');
+    const inicioObj = new Date(inicio + 'T00:00:00');
+    const finObj    = new Date(fin    + 'T23:59:59');
     document.getElementById('fecha-seleccionada').textContent =
-        fechaObj.toLocaleDateString('es-MX', { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+        `${inicioObj.toLocaleDateString('es-MX', {day:'2-digit', month:'short'})} — ${finObj.toLocaleDateString('es-MX', {day:'2-digit', month:'short', year:'numeric'})}`;
 
     try {
-        const fechaInicio = new Date(fecha + 'T00:00:00');
-        const fechaFin = new Date(fecha + 'T23:59:59');
-        const url = `/api/mesero/historial?fecha_inicio=${fechaInicio.toISOString()}&fecha_fin=${fechaFin.toISOString()}`;
+        const url = `/api/mesero/historial?fecha_inicio=${inicioObj.toISOString()}&fecha_fin=${finObj.toISOString()}`;
         const response = await fetch(url);
         if (!response.ok) throw new Error(`Error del servidor: ${response.status}`);
         const data = await response.json();
@@ -359,13 +362,21 @@ function graficaVentasPorHora(historial) {
 
     if (chartVentasHora) { chartVentasHora.destroy(); chartVentasHora = null; }
 
-    // Horas de 7am a 11pm
-    const horas = Array.from({length: 17}, (_, i) => i + 7);
-    const ventas = horas.map(h => {
-        return historial
-            .filter(r => r.fecha_cierre && new Date(r.fecha_cierre).getHours() === h)
-            .reduce((s, r) => s + (r.total_final || 0), 0);
+    // Agrupar por día dd/mm
+    const porDia = {};
+    historial.forEach(r => {
+        if (!r.fecha_cierre) return;
+        const d = new Date(r.fecha_cierre);
+        const key = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+        porDia[key] = (porDia[key] || 0) + (r.total_final || 0);
     });
+
+    const dias  = Object.keys(porDia).sort((a, b) => {
+        const [da, ma] = a.split('/').map(Number);
+        const [db, mb] = b.split('/').map(Number);
+        return ma !== mb ? ma - mb : da - db;
+    });
+    const ventas = dias.map(d => porDia[d]);
 
     const hayDatos = ventas.some(v => v > 0);
     if (!hayDatos) { empty.classList.remove('hidden'); return; }
@@ -374,7 +385,7 @@ function graficaVentasPorHora(historial) {
     chartVentasHora = new Chart(ctx, {
         type: 'line',
         data: {
-            labels: horas.map(h => `${String(h).padStart(2,'0')}:00`),
+            labels: dias,
             datasets: [{
                 label: 'Ventas',
                 data: ventas,
@@ -382,7 +393,7 @@ function graficaVentasPorHora(historial) {
                 backgroundColor: 'rgba(242,145,61,0.1)',
                 borderWidth: 2.5,
                 pointBackgroundColor: '#F2913D',
-                pointRadius: 4,
+                pointRadius: 3,
                 pointHoverRadius: 6,
                 fill: true,
                 tension: 0.4
@@ -395,11 +406,8 @@ function graficaVentasPorHora(historial) {
                 callbacks: { label: ctx => ` $${ctx.raw.toFixed(2)}` }
             }},
             scales: {
-                x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-                y: { grid: { color: '#f3f4f6' }, ticks: {
-                    font: { size: 10 },
-                    callback: v => `$${v}`
-                }}
+                x: { grid: { display: false }, ticks: { font: { size: 10 }, maxTicksLimit: 10 } },
+                y: { grid: { color: '#f3f4f6' }, ticks: { font: { size: 10 }, callback: v => `$${v}` }}
             }
         }
     });
@@ -518,12 +526,21 @@ function graficaPropinasHora(historial) {
 
     if (chartPropinasHora) { chartPropinasHora.destroy(); chartPropinasHora = null; }
 
-    const horas = Array.from({length: 17}, (_, i) => i + 7);
-    const propinas = horas.map(h => {
-        return historial
-            .filter(r => r.fecha_cierre && new Date(r.fecha_cierre).getHours() === h)
-            .reduce((s, r) => s + (r.propina || 0), 0);
+    // Agrupar por día dd/mm
+    const porDia = {};
+    historial.forEach(r => {
+        if (!r.fecha_cierre) return;
+        const d = new Date(r.fecha_cierre);
+        const key = `${String(d.getDate()).padStart(2,'0')}/${String(d.getMonth()+1).padStart(2,'0')}`;
+        porDia[key] = (porDia[key] || 0) + (r.propina || 0);
     });
+
+    const dias = Object.keys(porDia).sort((a, b) => {
+        const [da, ma] = a.split('/').map(Number);
+        const [db, mb] = b.split('/').map(Number);
+        return ma !== mb ? ma - mb : da - db;
+    });
+    const propinas = dias.map(d => porDia[d]);
 
     const hayDatos = propinas.some(v => v > 0);
     if (!hayDatos) { empty.classList.remove('hidden'); return; }
@@ -532,7 +549,7 @@ function graficaPropinasHora(historial) {
     chartPropinasHora = new Chart(ctx, {
         type: 'bar',
         data: {
-            labels: horas.map(h => `${String(h).padStart(2,'0')}:00`),
+            labels: dias,
             datasets: [{
                 label: 'Propinas',
                 data: propinas,
@@ -549,11 +566,8 @@ function graficaPropinasHora(historial) {
                 callbacks: { label: ctx => ` $${ctx.raw.toFixed(2)}` }
             }},
             scales: {
-                x: { grid: { display: false }, ticks: { font: { size: 10 } } },
-                y: { grid: { color: '#f3f4f6' }, ticks: {
-                    font: { size: 10 },
-                    callback: v => `$${v}`
-                }}
+                x: { grid: { display: false }, ticks: { font: { size: 10 }, maxTicksLimit: 10 } },
+                y: { grid: { color: '#f3f4f6' }, ticks: { font: { size: 10 }, callback: v => `$${v}` }}
             }
         }
     });

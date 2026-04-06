@@ -39,6 +39,10 @@ class CocinaController:
                 ]
                 
                 if items_pendientes:
+                    # Usar la fecha del item más antiguo pendiente (cuando se mandó el producto)
+                    fechas = [i.get("fecha_pedido") for i in items_pendientes if i.get("fecha_pedido")]
+                    fecha_ref = min(fechas) if fechas else comanda.get("fecha_apertura")
+
                     pedidos.append({
                         "id": str(comanda["_id"]),
                         "folio": comanda.get("folio"),
@@ -46,8 +50,8 @@ class CocinaController:
                         "mesero": comanda.get("mesero_nombre", "Mesero"),
                         "items": items_pendientes,
                         "num_items": len(items_pendientes),
-                        "fecha_pedido": comanda.get("fecha_apertura"),
-                        "tiempo_espera": _calcular_tiempo_espera(comanda.get("fecha_apertura"))
+                        "fecha_pedido": fecha_ref,
+                        "tiempo_espera": _calcular_tiempo_espera(fecha_ref)
                     })
 
             return jsonify({

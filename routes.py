@@ -29,6 +29,7 @@ from controllers.menu.menuController import MenuController
 from controllers.venta.ventasController import VentasController
 from controllers.analytics.analytics_controller import AnalyticsController
 from controllers.pago.mercadoPagoController import MercadoPagoController
+from controllers.mesero.kmeans_controller import MeseroKMeansController
 
 routes_bp = Blueprint("routes", __name__)
 
@@ -431,6 +432,18 @@ def mesero_historial():
 def api_mesero_historial():
     return HistorialController.historial_mesero()
 
+@routes_bp.route("/mesero/kmeans")
+@login_required
+@rol_required(['2'])
+def mesero_kmeans():
+    return MeseroKMeansController.vista()
+
+@routes_bp.route("/api/mesero/kmeans", methods=["GET"])
+@login_required
+@rol_required(['2'])
+def api_mesero_kmeans():
+    return MeseroKMeansController.api_kmeans()
+
 # =========================
 # API GENERALES
 # =========================
@@ -616,6 +629,12 @@ def api_cocina_estadisticas():
 @rol_required(['1', '3', '4'])
 def cocina_inventario():
     return redirect(url_for('routes.dashboard_inventario'))
+
+@routes_bp.route("/cocina/graficas-inventario")
+@login_required
+@rol_required(['3'])
+def cocina_graficas_inventario():
+    return InventarioController.graficas_cocina()
 
 # --- Gestión de Insumos ---//
 @routes_bp.route("/inventario/insumos")

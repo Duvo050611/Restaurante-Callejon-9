@@ -283,98 +283,66 @@ document.addEventListener('DOMContentLoaded', function() {
 // ===================================
 // SOCKET.IO - NOTIFICACIONES EN TIEMPO REAL
 // ===================================
-async function inicializarSocket() {
+function inicializarSocket() {
     try {
-        // Obtener token de autenticación
-        const response = await fetch('/api/me');
-        const data = await response.json();
-        
-        if (!data.success) {
-            console.error('❌ Error al obtener datos de usuario');
-            return;
-        }
-        
-        console.log('✅ Datos de usuario obtenidos');
-        
-        // Conectar a Socket.IO
-        socket = io({
-            auth: {
-                token: data.socket_token
-            }
-        });
-        
-        // Eventos de conexión
+        socket = io({ transports: ['websocket', 'polling'] });
+
         socket.on('connect', () => {
-            console.log('✅ Socket.IO conectado');
-            // Unirse a la sala de cocina
+            console.log('✅ Socket.IO conectado — sala cocina');
             socket.emit('join_room', 'cocina');
-            console.log('📥 Unido a sala "cocina"');
         });
-        
+
         socket.on('disconnect', () => {
             console.log('❌ Socket.IO desconectado');
         });
-        
+
         socket.on('connect_error', (error) => {
-            console.error('❌ Error de conexión Socket.IO:', error);
+            console.error('❌ Error Socket.IO:', error.message);
         });
-        
+
         // Evento: NUEVO PEDIDO
         socket.on('nuevo_pedido', (data) => {
-            console.log('🔔 NUEVO PEDIDO RECIBIDO:', data);
-            
-            // Reproducir sonido
+            console.log('🔔 NUEVO PEDIDO:', data);
             reproducirSonido();
-            
-            // Mostrar notificación
             mostrarNotificacionNuevoPedido(data);
-            
-            // Recargar pedidos
             cargarTodosPedidos();
             cargarEstadisticas();
         });
-        
-        // Evento: PEDIDO ACTUALIZADO
-        socket.on('preparacion_iniciada', (data) => {
-            console.log('🔄 Pedido actualizado:', data);
-            cargarTodosPedidos();
-        });
-        
-        // Evento: PEDIDO LISTO (respuesta a cocina)
-        socket.on('pedido_listo_confirmado', (data) => {
-            console.log('✅ Pedido listo confirmado:', data);
-            cargarTodosPedidos();
-        });
-        
+
+        socket.on('preparacion_iniciada', () => cargarTodosPedidos());
+        socket.on('pedido_listo_confirmado', () => cargarTodosPedidos());
+
     } catch (error) {
         console.error('❌ Error al inicializar Socket.IO:', error);
     }
 }
 
 function mostrarNotificacionNuevoPedido(data) {
-    // Notificación visual con SweetAlert2
+    const itemsHtml = (data.items || []).map(item =>
+        `<li class="flex justify-between py-1 border-b border-gray-100">
+            <span>${item.nombre}</span>
+            <span class="font-bold text-orange-600">x${item.cantidad}</span>
+        </li>`
+    ).join('');
+
     Swal.fire({
-        icon: 'info',
-        title: '🔔 ¡Nuevo Pedido!',
+        icon: 'warning',
+        title: '🍽️ ¡Nuevo Pedido!',
         html: `
-            <div class="text-left">
-                <p class="font-bold text-lg mb-2">Mesa ${data.mesa}</p>
-                <p class="text-sm text-gray-600 mb-2">Mesero: ${data.mesero || 'N/A'}</p>
-                <div class="bg-gray-100 p-3 rounded">
-                    <p class="font-semibold text-sm mb-2">${data.num_items} platillo(s):</p>
-                    <ul class="text-sm space-y-1">
-                        ${data.items.map(item => `
-                            <li>• <strong>${item.cantidad}x</strong> ${item.nombre}</li>
-                        `).join('')}
-                    </ul>
-                </div>
+            <div style="text-align:left">
+                <p style="font-size:1.2rem;font-weight:700;margin-bottom:4px;">Mesa ${data.mesa}</p>
+                <p style="color:#6b7280;margin-bottom:12px;">Mesero: ${data.mesero || 'N/A'}</p>
+                <ul style="list-style:none;padding:0;margin:0">${itemsHtml}</ul>
             </div>
         `,
-        showConfirmButton: true,
-        confirmButtonText: 'Ver Pedidos',
-        timer: 5000,
-        toast: false,
-        position: 'center'
+        confirmButtonText: '✅ Entendido',
+        confirmButtonColor: '#ea580c',
+        showCancelButton: false,
+        allowOutsideClick: false,
+        allowEscapeKey: false,
+        position: 'center',
+        backdrop: 'rgba(0,0,0,0.7)',
+        customClass: { popup: 'swal-cocina' }
     });
 }
 

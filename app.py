@@ -7,7 +7,8 @@ load_dotenv()
 from flask import Flask, request, session, redirect, url_for
 from flask_cors import CORS
 from flask_session import Session
-from flask_socketio import SocketIO, emit, join_room
+from flask_socketio import emit, join_room
+from extensions import socketio
 from datetime import datetime
 import os
 import sys
@@ -52,7 +53,7 @@ CORS(app, supports_credentials=True, resources={r"/*": {"origins": lista_origene
 # ================================
 # SOCKET.IO
 # ================================
-socketio = SocketIO(
+socketio.init_app(
     app,
     cors_allowed_origins=lista_origenes,
     async_mode="threading",
@@ -176,10 +177,10 @@ if __name__ == "__main__":
     print(f" Auto-reload: {'Activado' if reloader_config else 'Desactivado (Windows)'}")
     print("=" * 60 + "\n")
     
-    app.run(
+    socketio.run(
+        app,
         debug=True,
         use_reloader=reloader_config,
         host='0.0.0.0',
-        port=5000,
-        threaded=True  
+        port=5000
     )
