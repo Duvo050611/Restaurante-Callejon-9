@@ -11,7 +11,6 @@ from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 from controllers.notificaciones.notificacion_controller import NotificacionSistemaController
 import logging
-from datetime import datetime
 
 logging.basicConfig(level=logging.INFO)
 
@@ -66,8 +65,8 @@ class InventarioController:
             )
             
         except Exception as e:
-            logging.error(f"Error en dashboard de inventario: {e}")
-            return str(e), 500
+            logging.error(f"Error en dashboard de inventario: {str(e)}")
+            return "Error interno del servidor", 500
 
     # ==========================================
     # GESTIÓN DE INSUMOS
@@ -112,8 +111,8 @@ class InventarioController:
             )
             
         except Exception as e:
-            logging.error(f"Error al listar insumos: {e}")
-            return render_template("inventario/insumos/lista.html", error=str(e))
+            logging.error(f"Error al listar insumos: {str(e)}")
+            return render_template("inventario/insumos/lista.html", error="Error interno del servidor")
     
     @staticmethod
     def crear_insumo():
@@ -358,8 +357,8 @@ class InventarioController:
             )
             
         except Exception as e:
-            logging.error(f"Error al obtener historial: {e}")
-            return render_template("inventario/movimientos/historial.html", error=str(e))
+            logging.error(f"Error al obtener historial: {str(e)}")
+            return render_template("inventario/movimientos/historial.html", error="Error interno del servidor")
     
     # ==========================================
     # ALERTAS
@@ -380,8 +379,8 @@ class InventarioController:
             )
             
         except Exception as e:
-            logging.error(f"Error al obtener alertas: {e}")
-            return render_template("inventario/alertas.html", error=str(e))
+            logging.error(f"Error al obtener alertas: {str(e)}")
+            return render_template("inventario/alertas.html", error="Error interno del servidor")
     
     @staticmethod
     def resolver_alerta():
@@ -432,8 +431,8 @@ class InventarioController:
             )
             
         except Exception as e:
-            logging.error(f"Error al listar proveedores: {e}")
-            return render_template("inventario/proveedores/lista.html", error=str(e))
+            logging.error(f"Error al listar proveedores: {str(e)}")
+            return render_template("inventario/proveedores/lista.html", error="Error interno del servidor")
     
     @staticmethod
     def crear_proveedor():

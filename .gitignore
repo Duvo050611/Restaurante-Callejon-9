@@ -1,1 +1,14 @@
 flask_session/
+.env
+.env.local
+*.pem
+*.key
+*.crt
+__pycache__/
+*.pyc
+.DS_Store
+static/backup/
+venv/
+.idea/
+.vscode/
+*.log
