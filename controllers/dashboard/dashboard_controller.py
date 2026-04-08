@@ -111,9 +111,10 @@ class DashboardController:
     @staticmethod
     def inventario():
         """Dashboard principal de Inventario (Rol 4)"""
-        if "usuario_rol" not in session or str(session["usuario_rol"]) != "4":
+        rol = str(session.get("usuario_rol", ""))
+        if rol not in ["1", "3", "4"]:
             return redirect(url_for("routes.login"))
-    
+
         return InventarioController.dashboard()
     # ==========================================
     # GESTIÓN DE EMPLEADOS
@@ -307,7 +308,7 @@ class DashboardController:
         """Vista de reportes para administración"""
         if "usuario_rol" not in session or str(session["usuario_rol"]) != "1":
             return redirect(url_for("routes.login"))
-        return render_template("support/reportes/index.html")
+        return render_template("support/reportes/   index.html")
 
     @staticmethod
     def toggle_theme():

@@ -1,4 +1,11 @@
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+
+# Flask session
 flask_session/
+<<<<<<< HEAD
 .env
 .env.local
 *.pem
@@ -12,3 +19,17 @@ venv/
 .idea/
 .vscode/
 *.log
+=======
+
+# Entorno virtual
+venv/
+.venv/
+env/
+
+# Variables de entorno
+.env
+
+# Sistema operativo
+.DS_Store
+Thumbs.db
+>>>>>>> 7b34cd65bfb029aeef6a4af0c957ff2c9120f501

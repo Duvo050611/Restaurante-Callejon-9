@@ -2,12 +2,21 @@
 Controlador de Reportes - Sistema Completo de Reportes
 Maneja todas las rutas y lógica de reportes
 """
-from flask import Blueprint, render_template, request, jsonify, make_response, redirect, url_for
+from flask import Blueprint, render_template, request, jsonify, make_response, redirect, url_for, Response
 from datetime import datetime, timedelta
 from models.reports_model import ReportsModel
+from bson import json_util
 import csv
 import io
 import json
+
+
+def mongo_jsonify(data, success=True):
+    """Serializa datos de MongoDB (incluyendo ObjectId) a JSON response."""
+    return Response(
+        json_util.dumps({"success": success, "data": data}),
+        mimetype='application/json'
+    )
 
 reports_bp = Blueprint('reports', __name__, url_prefix='/reportes')
 
@@ -62,7 +71,7 @@ def api_ventas_por_periodo():
     granularidad = request.args.get('granularidad', 'dia')
     
     data = ReportsModel.ventas_por_periodo(fecha_inicio, fecha_fin, granularidad)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/utilidad-bruta')
 def api_utilidad_bruta():
@@ -71,34 +80,34 @@ def api_utilidad_bruta():
     fecha_fin = parse_date(request.args.get('fecha_fin'))
     
     data = ReportsModel.utilidad_bruta(fecha_inicio, fecha_fin)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/margen-por-producto')
 def api_margen_producto():
     """API: Margen por producto"""
     fecha_inicio = parse_date(request.args.get('fecha_inicio'))
     fecha_fin = parse_date(request.args.get('fecha_fin'))
-    
+
     data = ReportsModel.margen_por_producto(fecha_inicio, fecha_fin)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/ingresos-vs-gastos')
 def api_ingresos_gastos():
     """API: Ingresos vs Gastos"""
     fecha_inicio = parse_date(request.args.get('fecha_inicio'))
     fecha_fin = parse_date(request.args.get('fecha_fin'))
-    
+
     data = ReportsModel.ingresos_vs_gastos(fecha_inicio, fecha_fin)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/flujo-caja')
 def api_flujo_caja():
     """API: Flujo de caja"""
     fecha_inicio = parse_date(request.args.get('fecha_inicio'))
     fecha_fin = parse_date(request.args.get('fecha_fin'))
-    
+
     data = ReportsModel.flujo_caja(fecha_inicio, fecha_fin)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 # ==========================================
 # API: REPORTES DE INVENTARIO
@@ -111,25 +120,25 @@ def api_consumo_periodo():
     fecha_fin = parse_date(request.args.get('fecha_fin'))
     
     data = ReportsModel.consumo_por_periodo(fecha_inicio, fecha_fin)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/merma-acumulada')
 def api_merma():
     """API: Merma acumulada"""
     fecha_inicio = parse_date(request.args.get('fecha_inicio'))
     fecha_fin = parse_date(request.args.get('fecha_fin'))
-    
+
     data = ReportsModel.merma_acumulada(fecha_inicio, fecha_fin)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/rotacion-inventario')
 def api_rotacion():
     """API: Rotación de inventario"""
     fecha_inicio = parse_date(request.args.get('fecha_inicio'))
     fecha_fin = parse_date(request.args.get('fecha_fin'))
-    
+
     data = ReportsModel.rotacion_inventario(fecha_inicio, fecha_fin)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/insumos-costosos')
 def api_insumos_costosos():
@@ -137,15 +146,15 @@ def api_insumos_costosos():
     fecha_inicio = parse_date(request.args.get('fecha_inicio'))
     fecha_fin = parse_date(request.args.get('fecha_fin'))
     limite = int(request.args.get('limite', 10))
-    
+
     data = ReportsModel.insumos_mas_costosos(fecha_inicio, fecha_fin, limite)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/stock-actual')
 def api_stock():
     """API: Stock actual"""
     data = ReportsModel.stock_actual()
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 # ==========================================
 # API: REPORTES OPERATIVOS
@@ -158,7 +167,7 @@ def api_rendimiento():
     fecha_fin = parse_date(request.args.get('fecha_fin'))
     
     data = ReportsModel.rendimiento_empleado(fecha_inicio, fecha_fin)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/tiempo-servicio')
 def api_tiempo_servicio():
@@ -167,7 +176,7 @@ def api_tiempo_servicio():
     fecha_fin = parse_date(request.args.get('fecha_fin'))
     
     data = ReportsModel.tiempo_promedio_servicio(fecha_inicio, fecha_fin)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/platillos-mas-vendidos')
 def api_platillos_vendidos():
@@ -177,7 +186,7 @@ def api_platillos_vendidos():
     limite = int(request.args.get('limite', 10))
     
     data = ReportsModel.platillos_mas_vendidos(fecha_inicio, fecha_fin, limite)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/platillos-menos-rentables')
 def api_platillos_rentables():
@@ -187,7 +196,7 @@ def api_platillos_rentables():
     limite = int(request.args.get('limite', 10))
     
     data = ReportsModel.platillos_menos_rentables(fecha_inicio, fecha_fin, limite)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 # ==========================================
 # API: GRÁFICOS
@@ -201,7 +210,7 @@ def api_grafico_ventas_mensual():
     start_date = end_date - timedelta(days=365)
     
     data = ReportsModel.ventas_por_periodo(start_date, end_date, 'mes')
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/grafico-metodos-pago')
 def api_grafico_pagos():
@@ -210,7 +219,7 @@ def api_grafico_pagos():
     fecha_fin = parse_date(request.args.get('fecha_fin'))
     
     data = ReportsModel.distribucion_metodos_pago(fecha_inicio, fecha_fin)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 @reports_bp.route('/api/grafico-tendencia-ingresos')
 def api_grafico_tendencia():
@@ -219,7 +228,7 @@ def api_grafico_tendencia():
     fecha_fin = parse_date(request.args.get('fecha_fin'))
     
     data = ReportsModel.tendencia_ingresos(fecha_inicio, fecha_fin)
-    return jsonify({"success": True, "data": data})
+    return mongo_jsonify(data)
 
 # ==========================================
 # EXPORTACIÓN

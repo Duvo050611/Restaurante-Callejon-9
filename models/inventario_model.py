@@ -84,7 +84,7 @@ class Insumo:
             "created_at": datetime.utcnow(),
             "updated_at": datetime.utcnow()
         }
-        
+    
         result = cls.collection.insert_one(insumo)
         return result.inserted_id
     
@@ -359,7 +359,6 @@ class Proveedor:
             {"_id": ObjectId(proveedor_id)},
             {"$set": {"activo": False, "updated_at": datetime.utcnow()}}
         )
-
 
 # ==========================================
 # MODELO: ALERTA DE STOCK

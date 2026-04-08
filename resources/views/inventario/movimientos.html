@@ -1,0 +1,181 @@
+{% extends "layout/layout_base.html" %}
+
+{% block title %}Movimientos{% endblock %}
+{% block page_title %}Movimientos{% endblock %}
+{% block page_subtitle %}Historial de movimientos del inventario{% endblock %}
+
+{% block navigation %}
+<a href="{{ url_for('routes.dashboard_inventario') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg">
+    <i class="bi bi-house-door"></i>
+    <span>Inicio</span>
+</a>
+
+<a href="{{ url_for('routes.inventario_insumos') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg">
+    <i class="bi bi-box-seam"></i>
+    <span>Insumos</span>
+</a>
+<a href="{{ url_for('routes.inventario_historial') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-arrow-left-right text-lg"></i>
+    <span>Movimientos</span>
+</a>
+<a href="{{ url_for('routes.inventario_alertas') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-exclamation-triangle text-lg"></i>
+    <span>Alertas</span>
+    <a href="{{ url_for('routes.inventario_proveedores') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-truck text-lg"></i>
+    <span>Proveedores</span>
+</a>
+
+<a href="{{ url_for('routes.inventario_reportes') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-graph-up text-lg"></i>
+    <span>Reportes</span>
+</a>
+
+<script>
+    
+function toggleDropdown() {
+    const dropdown = document.getElementById("dropdownCategorias");
+    dropdown.classList.toggle("hidden");
+}
+</script>
+
+{% endblock %}
+
+
+{% block content %}
+
+<!-- Encabezado -->
+<div class="bg-gradient-to-r from-blue-500 to-indigo-600 p-6 rounded-xl shadow-lg text-white mb-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-bold mb-2">Movimientos de Inventario</h2>
+            <p class="opacity-90">Registro detallado de operaciones</p>
+        </div>
+        <div class="text-right">
+            <p class="text-sm opacity-90">Fecha</p>
+            <p class="text-2xl font-bold">{{ now().strftime('%d/%m/%Y') }}</p>
+        </div>
+    </div>
+</div>
+
+<!-- Filtros -->
+<div class="bg-white rounded-xl shadow-md p-6 mb-8">
+    <form method="GET" class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        
+        <select name="insumo_id" class="border rounded-lg p-2">
+            <option value="">Todos los insumos</option>
+            {% for insumo in insumos %}
+                <option value="{{ insumo._id }}">
+                    {{ insumo.nombre }}
+                </option>
+            {% endfor %}
+        </select>
+
+        <select name="tipo" class="border rounded-lg p-2">
+            <option value="todos">Todos los tipos</option>
+            {% for tipo in tipos_movimiento %}
+                <option value="{{ tipo }}">{{ tipo|title }}</option>
+            {% endfor %}
+        </select>
+
+        <input type="date" name="fecha_desde" class="border rounded-lg p-2">
+        <input type="date" name="fecha_hasta" class="border rounded-lg p-2">
+
+        <div class="md:col-span-4 text-right">
+            <button class="bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition">
+                Filtrar
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Tabla de Movimientos -->
+<div class="bg-white rounded-xl shadow-md p-6">
+
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i class="bi bi-clock-history text-blue-600"></i>
+            Movimientos Registrados
+        </h3>
+        <span class="text-sm text-gray-500">
+            Total: {{ movimientos|length if movimientos else 0 }}
+        </span>
+    </div>
+
+    {% if movimientos %}
+    <div class="overflow-x-auto">
+        <table class="w-full text-left text-sm">
+            <thead class="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                    <th class="py-3 px-4">Tipo</th>
+                    <th class="py-3 px-4">Insumo</th>
+                    <th class="py-3 px-4">Cantidad</th>
+                    <th class="py-3 px-4">Costo Unitario</th>
+                    <th class="py-3 px-4">Proveedor</th>
+                    <th class="py-3 px-4">Usuario</th>
+                    <th class="py-3 px-4">Fecha</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for m in movimientos %}
+                <tr class="border-b hover:bg-gray-50 transition">
+
+                    <!-- Tipo con badge -->
+                    <td class="py-3 px-4">
+                        <span class="px-3 py-1 rounded-full text-xs font-semibold
+                            {% if m.tipo == 'entrada' %}bg-green-100 text-green-800
+                            {% elif m.tipo == 'salida' %}bg-red-100 text-red-800
+                            {% elif m.tipo == 'merma' %}bg-orange-100 text-orange-800
+                            {% else %}bg-gray-100 text-gray-800{% endif %}">
+                            {{ m.tipo|title }}
+                        </span>
+                    </td>
+
+                    <td class="py-3 px-4 font-medium">
+                        {{ m.insumo_nombre }}
+                    </td>
+
+                    <td class="py-3 px-4">
+                        {{ m.cantidad }}
+                    </td>
+
+                    <td class="py-3 px-4">
+                        {% if m.costo_unitario %}
+                            ${{ "%.2f"|format(m.costo_unitario) }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                    <td class="py-3 px-4">
+                        {{ m.proveedor_nombre if m.proveedor_nombre else "—" }}
+                    </td>
+
+                    <td class="py-3 px-4">
+                        {{ m.usuario_nombre if m.usuario_nombre else "—" }}
+                    </td>
+
+                    <td class="py-3 px-4 text-gray-600">
+                        {% if m.fecha %}
+                            {{ m.fecha.strftime('%d/%m/%Y %H:%M') }}
+                        {% else %}
+                            —
+                        {% endif %}
+                    </td>
+
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% else %}
+    <div class="text-center py-12 text-gray-500">
+        <i class="bi bi-inbox text-6xl mb-4 block"></i>
+        <p class="text-lg">No hay movimientos registrados</p>
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}

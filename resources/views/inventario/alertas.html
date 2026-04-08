@@ -1,0 +1,103 @@
+{% extends "layout/layout_base.html" %}
+
+{% block title %}Alertas{% endblock %}
+{% block page_title %}Alertas de Inventario{% endblock %}
+{% block page_subtitle %}Stock crítico y advertencias{% endblock %}
+
+{% block navigation %}
+<a href="{{ url_for('routes.dashboard_inventario') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg">
+    <i class="bi bi-house-door"></i>
+    <span>Inicio</span>
+</a>
+
+<a href="{{ url_for('routes.inventario_insumos') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg">
+    <i class="bi bi-box-seam"></i>
+    <span>Insumos</span>
+</a>
+
+<a href="{{ url_for('routes.inventario_historial') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-arrow-left-right text-lg"></i>
+    <span>Movimientos</span>
+</a>
+
+<a href="{{ url_for('routes.inventario_alertas') }}" class="nav-link active flex items-center gap-3 px-4 py-3 rounded-lg">
+    <i class="bi bi-exclamation-triangle"></i>
+    <span>Alertas</span>
+</a>
+
+  <a href="{{ url_for('routes.inventario_proveedores') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-truck text-lg"></i>
+    <span>Proveedores</span>
+</a>
+<a href="{{ url_for('routes.inventario_reportes') }}" class="nav-link flex items-center gap-3 px-4 py-3 rounded-lg hover:bg-gray-100 transition">
+    <i class="bi bi-graph-up text-lg"></i>
+    <span>Reportes</span>
+</a>
+{% endblock %}
+
+{% block content %}
+
+<div class="bg-white rounded-xl shadow-md p-6">
+
+    <!-- ENCABEZADO -->
+    <div class="flex items-center justify-between mb-6">
+        <h3 class="text-xl font-bold text-gray-800 flex items-center gap-2">
+            <i class="bi bi-exclamation-triangle-fill text-red-600"></i>
+            Alertas de Stock Crítico
+        </h3>
+    </div>
+
+    <!-- TABLA -->
+    <div class="overflow-x-auto">
+        <table class="w-full text-sm text-left">
+            <thead class="bg-gray-50 border-b-2 border-gray-200">
+                <tr>
+                    <th class="py-3 px-4 font-semibold">Insumo</th>
+                    <th class="py-3 px-4 font-semibold">Stock Actual</th>
+                    <th class="py-3 px-4 font-semibold">Stock Mínimo</th>
+                    <th class="py-3 px-4 font-semibold">Diferencia</th>
+                    <th class="py-3 px-4 font-semibold">Estado</th>
+                </tr>
+            </thead>
+
+            <tbody>
+                {% for alerta in alertas %}
+                <tr class="border-b hover:bg-gray-50 transition">
+                    <td class="py-3 px-4 font-medium">
+                        {{ alerta.insumo_nombre }}
+                    </td>
+
+                    <td class="py-3 px-4">
+                        {{ alerta.stock_actual }}
+                    </td>
+
+                    <td class="py-3 px-4">
+                        {{ alerta.stock_minimo }}
+                    </td>
+
+                    <td class="py-3 px-4 font-semibold text-red-600">
+                        {{ alerta.diferencia }}
+                    </td>
+
+                    <td class="py-3 px-4">
+                        <span class="px-3 py-1 text-xs rounded-full bg-red-100 text-red-700 font-semibold">
+                            Crítico
+                        </span>
+                    </td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    <!-- MENSAJE SI NO HAY ALERTAS -->
+    {% if not alertas %}
+    <div class="text-center py-12 text-gray-500">
+        <i class="bi bi-shield-check text-6xl mb-4 block"></i>
+        <p class="text-lg">No hay alertas registradas</p>
+    </div>
+    {% endif %}
+
+</div>
+
+{% endblock %}
