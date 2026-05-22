@@ -1,4 +1,4 @@
-{% extends "layout/layout_base.html" %}
+{% extends "layout/layout_mesero.html" %}
 
 {% block title %}Mis Propinas{% endblock %}
 {% block page_title %}Control de Propinas{% endblock %}
@@ -6,7 +6,7 @@
 {% block navigation %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    const linksAdmin = ['nav-dashboard', 'nav-menu', 'nav-ventas', 'nav-reportes', 'nav-analytics', 'nav-settings'];
+    const linksAdmin = ['nav-dashboard', 'nav-menu', 'nav-ventas', 'nav-reportes', 'nav-analytics'];
     linksAdmin.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';

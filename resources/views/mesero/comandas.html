@@ -1,4 +1,4 @@
-{% extends "layout/layout_base.html" %}
+{% extends "layout/layout_mesero.html" %}
 
 {% block title %}Mis Comandas - Mesero{% endblock %}
 {% block page_title %}Gestión de Comandas{% endblock %}
@@ -9,7 +9,7 @@
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Ocultar links del admin que no aplican al mesero
-    const linksAdmin = ['nav-dashboard', 'nav-menu', 'nav-ventas', 'nav-reportes', 'nav-analytics', 'nav-settings'];
+    const linksAdmin = ['nav-dashboard', 'nav-menu', 'nav-ventas', 'nav-reportes', 'nav-analytics'];
     linksAdmin.forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';

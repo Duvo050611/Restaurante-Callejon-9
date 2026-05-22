@@ -1,4 +1,4 @@
-{% extends "layout/layout_base.html" %}
+{% extends "layout/layout_mesero.html" %}
 
 {% block title %}Análisis de Mesas — K-Means{% endblock %}
 {% block page_title %}Segmentación de Mesas{% endblock %}
@@ -7,7 +7,7 @@
 {% block navigation %}
 <script>
 document.addEventListener('DOMContentLoaded', function() {
-    ['nav-dashboard','nav-menu','nav-ventas','nav-reportes','nav-analytics','nav-settings'].forEach(id => {
+    ['nav-dashboard','nav-menu','nav-ventas','nav-reportes','nav-analytics'].forEach(id => {
         const el = document.getElementById(id);
         if (el) el.style.display = 'none';
     });

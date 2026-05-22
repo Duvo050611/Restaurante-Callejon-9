@@ -125,20 +125,20 @@ def inject_now():
 def log_request():
     if request.path.startswith("/static"):
         return
-    print(f"\n📡 {request.method} {request.path}")
-    print("🍪 Cookies:", request.cookies.keys())
+    print(f"\n[REQ] {request.method} {request.path}")
+    print("[COOKIES]:", request.cookies.keys())
 
 # ================================
 # SOCKET EVENTS
 # ================================
 @socketio.on("connect")
 def socket_connect(auth):
-    print("🔌 Socket conectado")
+    print("[SOCKET] Conectado")
     print("Auth:", auth)
 
 @socketio.on("disconnect")
 def socket_disconnect():
-    print("❌ Socket desconectado")
+    print("[SOCKET] Desconectado")
 
 @socketio.on("join_room")
 def on_join_room(room):
