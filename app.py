@@ -58,8 +58,7 @@ _origenes_env = [
 lista_origenes = list(set(_origenes_base + _origenes_env))
 
 CORS(app, supports_credentials=True, resources={
-    r"/api/*": {"origins": "*", "supports_credentials": False},
-    r"/*":     {"origins": lista_origenes, "supports_credentials": True},
+    r"/*": {"origins": lista_origenes},
 })
 
 # ================================
