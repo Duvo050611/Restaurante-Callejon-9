@@ -40,22 +40,32 @@ app.json = MongoJSONProvider(app)
 app.config['TEMPLATES_AUTO_RELOAD'] = True
 app.config['SEND_FILE_MAX_AGE_DEFAULT'] = 0
 # Configuración de CORS
-lista_origenes = [
+_origenes_base = [
     "http://127.0.0.1:5500",
     "http://localhost:5500",
     "http://localhost:3000",
     "http://localhost:5000",
-    "http://127.0.0.1:5000"
+    "http://127.0.0.1:5000",
+    "https://restaurante-callejon-9-production.up.railway.app",
 ]
+_origenes_env = [
+    o.strip()
+    for o in os.getenv("ALLOWED_ORIGINS", "").split(",")
+    if o.strip()
+]
+lista_origenes = list(set(_origenes_base + _origenes_env))
 
-CORS(app, supports_credentials=True, resources={r"/*": {"origins": lista_origenes}})
+CORS(app, supports_credentials=True, resources={
+    r"/api/*": {"origins": "*", "supports_credentials": False},
+    r"/*":     {"origins": lista_origenes, "supports_credentials": True},
+})
 
 # ================================
 # SOCKET.IO
 # ================================
 socketio.init_app(
     app,
-    cors_allowed_origins=lista_origenes,
+    cors_allowed_origins="*",
     async_mode="threading",
     manage_session=False
 )
