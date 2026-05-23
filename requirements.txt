@@ -37,4 +37,4 @@ pytz==2025.2
 tzdata==2025.3
 six==1.17.0
 fpdf==1.7.2
-gunicorn==20.1.0
+gunicorn==20.1.0schedule>=1.2.0
