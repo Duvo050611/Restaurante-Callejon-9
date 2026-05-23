@@ -46,6 +46,8 @@ _origenes_base = [
     "http://localhost:3000",
     "http://localhost:5000",
     "http://127.0.0.1:5000",
+    "http://localhost:8081",
+    "http://127.0.0.1:8081",
     "https://restaurante-callejon-9-production.up.railway.app",
 ]
 _origenes_env = [
