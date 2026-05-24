@@ -38,14 +38,17 @@ METODOS_PESOS = [0.50, 0.30, 0.05, 0.15]
 #   Ocasional (7-12): baja frecuencia + ticket bajo   → cluster C
 # ---------------------------------------------------------------------------
 MESAS = {
-    1: {"cluster": "vip",       "peso": 0.16, "ticket_mean": 360, "ticket_std": 50},
-    2: {"cluster": "vip",       "peso": 0.14, "ticket_mean": 400, "ticket_std": 55},
-    3: {"cluster": "regular",   "peso": 0.15, "ticket_mean": 210, "ticket_std": 35},
-    4: {"cluster": "regular",   "peso": 0.14, "ticket_mean": 195, "ticket_std": 30},
-    5: {"cluster": "regular",   "peso": 0.13, "ticket_mean": 225, "ticket_std": 40},
-    6: {"cluster": "ocasional", "peso": 0.10, "ticket_mean": 110, "ticket_std": 20},
-    7: {"cluster": "ocasional", "peso": 0.09, "ticket_mean":  95, "ticket_std": 18},
-    8: {"cluster": "ocasional", "peso": 0.09, "ticket_mean": 125, "ticket_std": 22},
+    # VIP: ticket alto pero frecuencia moderada (vienen poco, gastan mucho)
+    1: {"cluster": "vip",       "peso": 0.14, "ticket_mean": 400, "ticket_std": 65},
+    2: {"cluster": "vip",       "peso": 0.10, "ticket_mean": 480, "ticket_std": 75},
+    # Regular: ticket medio, MUY alta frecuencia (vienen seguido)
+    3: {"cluster": "regular",   "peso": 0.20, "ticket_mean": 160, "ticket_std": 28},
+    4: {"cluster": "regular",   "peso": 0.18, "ticket_mean": 150, "ticket_std": 25},
+    5: {"cluster": "regular",   "peso": 0.16, "ticket_mean": 165, "ticket_std": 30},
+    # Ocasional: ticket similar a Regular pero MUY baja frecuencia
+    6: {"cluster": "ocasional", "peso": 0.09, "ticket_mean": 155, "ticket_std": 28},
+    7: {"cluster": "ocasional", "peso": 0.07, "ticket_mean": 140, "ticket_std": 22},
+    8: {"cluster": "ocasional", "peso": 0.06, "ticket_mean": 160, "ticket_std": 30},
 }
 
 # ---------------------------------------------------------------------------

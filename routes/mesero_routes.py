@@ -73,6 +73,24 @@ def register_mesero_routes(bp):
     def mesero_kmeans():
         return MeseroKMeansController.vista()
 
+    @bp.route("/mesero/arbol")
+    @login_required
+    @rol_required(['2'])
+    def mesero_arbol():
+        return MeseroKMeansController.vista_arbol()
+
+    @bp.route("/mesero/diagnostico")
+    @login_required
+    @rol_required(['2'])
+    def mesero_diagnostico():
+        return MeseroKMeansController.vista_diagnostico()
+
+    @bp.route("/mesero/metodologia")
+    @login_required
+    @rol_required(['2'])
+    def mesero_metodologia():
+        return MeseroKMeansController.vista_metodologia()
+
     # Ruta general de menú — registrada después que la de admin, preservando el comportamiento original
     @bp.route("/api/menu", methods=["GET"])
     @login_required
@@ -151,3 +169,9 @@ def register_mesero_routes(bp):
     @rol_required(['2'])
     def api_mesero_kmeans():
         return MeseroKMeansController.api_kmeans()
+
+    @bp.route("/api/mesero/kmeans/diagnostico", methods=["GET"])
+    @login_required
+    @rol_required(['2'])
+    def api_mesero_kmeans_diagnostico():
+        return MeseroKMeansController.api_diagnostico()
