@@ -20,10 +20,6 @@ document.addEventListener('DOMContentLoaded', function() {
     <i class="bi bi-house-door text-lg"></i>
     <span>Inicio</span>
 </a>
-<a href="{{ url_for('routes.mesero_mesas') }}" class="nav-link">
-    <i class="bi bi-grid-3x3 text-lg"></i>
-    <span>Mis Mesas</span>
-</a>
 <a href="{{ url_for('routes.mesero_comandas') }}" class="nav-link">
     <i class="bi bi-receipt text-lg"></i>
     <span>Comandas Activas</span>
@@ -228,11 +224,14 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
+{% endblock %}
+
+{% block modals %}
 <!-- =============================== -->
 <!-- MODAL DETALLE MESA               -->
 <!-- =============================== -->
 <div id="modalMesa"
-    class="hidden fixed inset-0 bg-[#0D0D0D] bg-opacity-80 z-50 flex items-center justify-center p-4 backdrop-blur-sm">
+    class="hidden fixed inset-0 bg-[#0D0D0D] bg-opacity-80 z-[1100] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-xl shadow-2xl max-w-2xl w-full max-h-[90vh] overflow-hidden">
         <div class="bg-[#F2913D] text-white p-5 flex items-center justify-between">
             <h3 class="text-xl font-bold flex items-center gap-2 uppercase">
@@ -252,7 +251,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- MODAL MENÚ / CARRITO             -->
 <!-- =============================== -->
 <div id="modalMenu"
-    class="hidden fixed inset-0 bg-black/60 z-[100] flex items-center justify-center p-2 md:p-4 backdrop-blur-sm">
+    class="hidden fixed inset-0 bg-black/60 z-[1100] flex items-center justify-center p-2 md:p-4 backdrop-blur-sm">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-5xl h-[95vh] md:h-[85vh] flex flex-col overflow-hidden">
 
         <div class="p-5 border-b flex justify-between items-center bg-orange-50">
@@ -308,7 +307,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- MODAL PRODUCTO CON OPCIONES      -->
 <!-- =============================== -->
 <div id="modal-producto"
-    class="hidden fixed inset-0 bg-black/70 z-[150] flex items-center justify-center p-4 backdrop-blur-sm">
+    class="hidden fixed inset-0 bg-black/70 z-[1200] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-3xl shadow-2xl w-full max-w-sm overflow-hidden">
 
         <!-- Imagen -->
@@ -358,7 +357,7 @@ document.addEventListener('DOMContentLoaded', function() {
 <!-- MODAL TICKET                     -->
 <!-- =============================== -->
 <div id="modalTicket"
-    class="hidden fixed inset-0 bg-black/70 z-[200] flex items-center justify-center p-4 backdrop-blur-sm">
+    class="hidden fixed inset-0 bg-black/70 z-[1100] flex items-center justify-center p-4 backdrop-blur-sm">
     <div class="bg-white rounded-2xl shadow-2xl w-full max-w-sm overflow-hidden">
 
         <div class="flex items-center justify-between px-5 py-3 bg-gray-50 border-b">

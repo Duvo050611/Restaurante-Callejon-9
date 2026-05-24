@@ -21,15 +21,7 @@ def register_mesero_routes(bp):
     @login_required
     @rol_required(['2'])
     def mesero_mesas():
-        perfil_mesero = session.get("perfil_mesero")
-        if not perfil_mesero:
-            return redirect(url_for("routes.login"))
-        stats = {
-            "mesas_asignadas": perfil_mesero.get("mesas_asignadas", []),
-            "comandas_activas": 0,
-            "propinas_dia": perfil_mesero.get("propinas", {}).get("acumulada_dia", 0)
-        }
-        return render_template("mesero/dashboard.html", perfil=perfil_mesero, stats=stats)
+        return redirect(url_for("routes.dashboard_mesero"))
 
     @bp.route("/mesero/comandas")
     @login_required

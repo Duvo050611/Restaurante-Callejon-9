@@ -2,6 +2,7 @@ from config.db import db
 from bson.objectid import ObjectId
 from datetime import datetime, timedelta
 from models.comanda_model import Comanda
+from models.ticket_model import Ticket
 
 
 class ComandaService:
@@ -160,6 +161,15 @@ class ComandaService:
                 "fecha": fecha_actual,
                 "metodo_pago": metodo_pago
             })
+
+        Ticket.create(
+            comanda=comanda,
+            metodo_pago=metodo_pago,
+            propina=propina,
+            porcentaje_propina=porcentaje,
+            total_final=total_final,
+            fecha_cierre=fecha_actual,
+        )
 
         return {
             "success": True,
