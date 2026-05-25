@@ -6,6 +6,9 @@ from controllers.mesa.mesaController import MesaController
 from controllers.propina.propinasController import PropinasController
 from controllers.historial.historialController import HistorialController
 from controllers.mesero.kmeans_controller import MeseroKMeansController
+from controllers.mesero.randomforest_controller import MeseroRandomForestController
+from controllers.mesero.diagnostico_controller import MeseroDiagnosticoController
+from controllers.mesero.metodologia_controller import MeseroMetodologiaController
 from models.producto_model import Producto
 
 
@@ -77,19 +80,19 @@ def register_mesero_routes(bp):
     @login_required
     @rol_required(['2'])
     def mesero_arbol():
-        return MeseroKMeansController.vista_arbol()
+        return MeseroRandomForestController.vista()
 
     @bp.route("/mesero/diagnostico")
     @login_required
     @rol_required(['2'])
     def mesero_diagnostico():
-        return MeseroKMeansController.vista_diagnostico()
+        return MeseroDiagnosticoController.vista()
 
     @bp.route("/mesero/metodologia")
     @login_required
     @rol_required(['2'])
     def mesero_metodologia():
-        return MeseroKMeansController.vista_metodologia()
+        return MeseroMetodologiaController.vista()
 
     # Ruta general de menú — registrada después que la de admin, preservando el comportamiento original
     @bp.route("/api/menu", methods=["GET"])
@@ -174,4 +177,4 @@ def register_mesero_routes(bp):
     @login_required
     @rol_required(['2'])
     def api_mesero_kmeans_diagnostico():
-        return MeseroKMeansController.api_diagnostico()
+        return MeseroDiagnosticoController.api_diagnostico()
